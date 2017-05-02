@@ -6,8 +6,8 @@
 	"license": ["GPL-2.0+"],
 
 	"require": {
-		"typo3/cms-core": "~7.5",
-		"typo3/cms-frontend": "~7.5"
+		"typo3/cms-core": "^7.6 || ^8.0",
+		"typo3/cms-frontend": "^7.6 || ^8.0"
 	},
 	"replace": {
 		"jumpurl": "*"
