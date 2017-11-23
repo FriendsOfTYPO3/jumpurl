@@ -42,7 +42,7 @@ class JumpUrlUtility
      */
     public static function calculateHashSecure($jumpUrl, $locationData, $mimeType)
     {
-        $data = array((string)$jumpUrl, (string)$locationData, (string)$mimeType);
+        $data = [(string)$jumpUrl, (string)$locationData, (string)$mimeType];
         return GeneralUtility::hmac(serialize($data));
     }
 }

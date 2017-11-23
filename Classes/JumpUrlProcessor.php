@@ -59,7 +59,7 @@ class JumpUrlProcessor implements UrlProcessorInterface
             $url = str_replace('%2F', '/', rawurlencode(rawurldecode($url)));
         }
 
-        $url = $this->build($url, isset($configuration['jumpurl.']) ? $configuration['jumpurl.'] : array());
+        $url = $this->build($url, isset($configuration['jumpurl.']) ? $configuration['jumpurl.'] : []);
 
         // Now add the prefix again if it was not added by a typolink call already.
         if ($urlPrefix !== '' && !StringUtility::beginsWith($url, $urlPrefix)) {
@@ -77,7 +77,7 @@ class JumpUrlProcessor implements UrlProcessorInterface
      * @param array $configuration Optional jump URL configuration
      * @return bool TRUE if enabled, FALSE if disabled
      */
-    protected function isEnabled($context, array $configuration = array())
+    protected function isEnabled($context, array $configuration = [])
     {
         if (!empty($configuration['jumpurl.']['forceDisable'])) {
             return false;
@@ -102,7 +102,6 @@ class JumpUrlProcessor implements UrlProcessorInterface
         return $enabled;
     }
 
-
     /**
      * Builds a jump URL for the given URL
      *
@@ -112,25 +111,25 @@ class JumpUrlProcessor implements UrlProcessorInterface
      */
     protected function build($url, array $configuration)
     {
-        $urlParameters = array('jumpurl' => $url);
+        $urlParameters = ['jumpurl' => $url];
 
         // see if a secure File URL should be built
         if (!empty($configuration['secure'])) {
             $secureParameters = $this->getParametersForSecureFile(
                 $url,
-                isset($configuration['secure.']) ? $configuration['secure.'] : array()
+                isset($configuration['secure.']) ? $configuration['secure.'] : []
             );
             $urlParameters = array_merge($urlParameters, $secureParameters);
         } else {
             $urlParameters['juHash'] = JumpUrlUtility::calculateHash($url);
         }
 
-        $typoLinkConfiguration = array(
+        $typoLinkConfiguration = [
             'parameter' => $this->getTypoLinkParameter($configuration),
             'additionalParams' => GeneralUtility::implodeArrayForUrl('', $urlParameters),
             // make sure jump URL is not called again
-            'jumpurl.' => array('forceDisable' => '1')
-        );
+            'jumpurl.' => ['forceDisable' => '1']
+        ];
 
         return $this->getContentObjectRenderer()->typoLink_URL($typoLinkConfiguration);
     }
@@ -148,14 +147,13 @@ class JumpUrlProcessor implements UrlProcessorInterface
      * @param string $jumpUrl The URL to jump to, basically the filepath
      * @param array $configuration TypoScript properties for the "jumpurl.secure" property of "filelink"
      * @return array URL parameters required for jumpUrl secure
-     *
      */
     protected function getParametersForSecureFile($jumpUrl, array $configuration)
     {
-        $parameters = array(
+        $parameters = [
             'juSecure' => 1,
             'locationData' => $this->getTypoScriptFrontendController()->id . ':' . $this->getContentObjectRenderer()->currentRecord
-        );
+        ];
 
         $pathInfo = pathinfo($jumpUrl);
         if (!empty($pathInfo['extension'])) {

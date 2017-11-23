@@ -55,13 +55,13 @@ class JumpUrlProcessorTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
 
         $this->jumpUrlProcessor = $this->getMock(
             JumpUrlProcessorMock::class,
-            array('getTypoScriptFrontendController', 'getContentObjectRenderer')
+            ['getTypoScriptFrontendController', 'getContentObjectRenderer']
         );
 
         $this->tsfe = $this->getAccessibleMock(
             TypoScriptFrontendController::class,
-            array('getPagesTSconfig'),
-            array(),
+            ['getPagesTSconfig'],
+            [],
             '',
             false
         );
@@ -85,16 +85,16 @@ class JumpUrlProcessorTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
 
         $jumpUrlSecureParameters = $this->jumpUrlProcessor->getParametersForSecureFile(
             '/fileadmin/a/test/file.txt',
-            array('mimeTypes' => 'dummy=application/x-executable,txt=text/plain')
+            ['mimeTypes' => 'dummy=application/x-executable,txt=text/plain']
         );
 
         $this->assertSame(
-            array(
+            [
                 'juSecure' => 1,
                 'locationData' => '456:tt_content:123',
                 'mimeType' => 'text/plain',
                 'juHash' => '1cccb7f01c8a3f58ee890377b5de9bdc05115a37',
-            ),
+            ],
             $jumpUrlSecureParameters
         );
     }
