@@ -16,6 +16,7 @@ namespace FoT3\Jumpurl\Tests\Unit;
 
 use FoT3\Jumpurl\JumpUrlHandler;
 use FoT3\Jumpurl\JumpUrlProcessor;
+use Nimut\TestingFramework\TestCase\UnitTestCase;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Charset\CharsetConverter;
 use TYPO3\CMS\Core\Database\DatabaseConnection;
@@ -30,7 +31,7 @@ use TYPO3\CMS\Frontend\Page\PageRepository;
 /**
  * Testcase for the jumpurl processing in TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer.
  */
-class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
+class ContentObjectRendererTest extends UnitTestCase
 {
     /**
      * @var array A backup of registered singleton instances
@@ -390,7 +391,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
                 $this->returnValue(
                 [
                     'uid' => $testData['pageId'],
-                    'doktype' => \TYPO3\CMS\Frontend\Page\PageRepository::DOKTYPE_DEFAULT,
+                    'doktype' => PageRepository::DOKTYPE_DEFAULT,
                     'url_scheme' => 0,
                     'title' => 'testpage',
                 ]

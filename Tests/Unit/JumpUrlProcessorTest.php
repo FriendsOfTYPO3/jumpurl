@@ -14,13 +14,14 @@ namespace FoT3\Jumpurl\Tests\Unit;
  * The TYPO3 project - inspiring people to share!
  */
 
+use Nimut\TestingFramework\TestCase\UnitTestCase;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
  * Testcase for handling jump URLs when given with a test parameter
  */
-class JumpUrlProcessorTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
+class JumpUrlProcessorTest extends UnitTestCase
 {
     /**
      * @var \PHPUnit_Framework_MockObject_MockObject|ContentObjectRenderer

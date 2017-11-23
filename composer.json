@@ -9,6 +9,8 @@
 		"typo3/cms-frontend": "^7.6 || ^8.0"
 	},
 	"require-dev": {
+		"nimut/testing-framework": "^2.0",
+		"phpunit/phpunit": "^4.8",
 		"friendsofphp/php-cs-fixer": "^2.0"
 	},
 	"replace": {

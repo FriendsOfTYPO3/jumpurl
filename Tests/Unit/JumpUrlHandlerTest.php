@@ -15,6 +15,8 @@ namespace FoT3\Jumpurl\Tests\Unit;
  */
 
 use FoT3\Jumpurl\JumpUrlHandler;
+use FoT3\Jumpurl\JumpUrlUtility;
+use Nimut\TestingFramework\TestCase\UnitTestCase;
 use TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
@@ -25,7 +27,7 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 /**
  * Testcase for handling jump URLs when given with a test parameter
  */
-class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
+class JumpUrlHandlerTest extends UnitTestCase
 {
     /**
      * The default location data used for JumpUrl secure.
@@ -326,7 +328,6 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
      * @expectedException \Exception
      * @expectedExceptionCode 1294585194
      * @param string $path
-     * @param string $path
      */
     public function jumpUrlSecureFailsOnForbiddenFileLocation($path)
     {
@@ -335,7 +336,7 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
             ->with('')
             ->will($this->returnValue(true));
 
-        $hash = \FoT3\Jumpurl\JumpUrlUtility::calculateHashSecure($path, '', '');
+        $hash = JumpUrlUtility::calculateHashSecure($path, '', '');
 
         $_GET['jumpurl'] = $path;
         $_GET['juSecure'] = '1';
