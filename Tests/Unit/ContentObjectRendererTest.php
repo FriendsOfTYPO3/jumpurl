@@ -110,7 +110,9 @@ class ContentObjectRendererTest extends UnitTestCase
         $expectedHash = '304b8c8e022e92e6f4d34e97395da77705830818';
         $expectedLink = htmlspecialchars($testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode(str_replace('%2F', '/', rawurlencode($relativeFileNameAndPath))) . '&juSecure=1&locationData=' . rawurlencode($testData['locationData']) . '&juHash=' . $expectedHash);
 
-        $result = $this->subject->filelink($fileName, ['path' => 'typo3temp/', 'jumpurl' => '1', 'jumpurl.' => ['secure' => 1]]);
+        chdir(PATH_site);
+
+        $result = $this->subject->filelink($fileName, $this->buildConfiguration(['path' => 'typo3temp/', 'jumpurl' => '1', 'jumpurl.' => ['secure' => 1]]));
         $this->assertEquals('<a href="' . $expectedLink . '">' . $fileName . '</a>', $result);
 
         GeneralUtility::unlink_tempfile($fileNameAndPath);
@@ -131,7 +133,9 @@ class ContentObjectRendererTest extends UnitTestCase
         $expectedHash = '1933f3c181db8940acfcd4d16c74643947179948';
         $expectedLink = htmlspecialchars($testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode($relativeFileNameAndPath) . '&juSecure=1&locationData=' . rawurlencode($testData['locationData']) . '&juHash=' . $expectedHash);
 
-        $result = $this->subject->filelink($fileName, ['path' => 'typo3temp/', 'jumpurl' => '1', 'jumpurl.' => ['secure' => 1]]);
+        chdir(PATH_site);
+
+        $result = $this->subject->filelink($fileName, $this->buildConfiguration(['path' => 'typo3temp/', 'jumpurl' => '1', 'jumpurl.' => ['secure' => 1]]));
         $this->assertEquals('<a href="' . $expectedLink . '">' . $fileName . '</a>', $result);
 
         GeneralUtility::unlink_tempfile($fileNameAndPath);
@@ -151,8 +155,10 @@ class ContentObjectRendererTest extends UnitTestCase
         $expectedLink = $testData['absRefPrefix'] . $fileNameAndPath;
         $expectedLink = '<a href="' . $expectedLink . '">' . $fileName . '</a>';
 
+        chdir(PATH_site);
+
         // Test with deprecated configuration, TODO: remove when deprecated code is removed!
-        $result = $this->subject->filelink($fileName, ['path' => 'typo3temp/', 'jumpurl' => 0]);
+        $result = $this->subject->filelink($fileName, $this->buildConfiguration(['path' => 'typo3temp/', 'jumpurl' => 0]));
         $this->assertEquals($expectedLink, $result);
 
         GeneralUtility::unlink_tempfile($fileNameAndPath);
@@ -172,8 +178,10 @@ class ContentObjectRendererTest extends UnitTestCase
         $expectedLink = $testData['absRefPrefix'] . $fileNameAndPath;
         $expectedLink = '<a href="' . $expectedLink . '">' . $fileName . '</a>';
 
+        chdir(PATH_site);
+
         // Test with deprecated configuration
-        $result = $this->subject->filelink($fileName, ['path' => 'typo3temp/', 'jumpurl' => 0]);
+        $result = $this->subject->filelink($fileName, $this->buildConfiguration(['path' => 'typo3temp/', 'jumpurl' => 0]));
         $this->assertEquals($expectedLink, $result);
 
         GeneralUtility::unlink_tempfile($fileNameAndPath);
@@ -195,6 +203,8 @@ class ContentObjectRendererTest extends UnitTestCase
         // due to a bug in the jump URL generation in the old version only
         // the first part of the link is encoded which does not make much sense.
         $expectedLink = htmlspecialchars($expectedLinkFirstPart . $expectedLinkSecondPart);
+
+        chdir(PATH_site);
 
         $result = $this->subject->http_makelinks('teststring ' . $testUrl . ' anotherstring', ['keep' => 'scheme']);
         $this->assertEquals('teststring <a href="' . $expectedLink . '">' . $testUrl . '</a> anotherstring', $result);
@@ -302,6 +312,9 @@ class ContentObjectRendererTest extends UnitTestCase
         $testFileLink = $relativeFileNameAndPath;
         $expectedHash = '691dbf63a21181e2d69bf78e61f1c9fd023aef2c';
         $expectedUrl = $testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode(str_replace('%2F', '/', rawurlencode($testFileLink))) . '&juHash=' . $expectedHash;
+
+        chdir(PATH_site);
+
         $generatedUrl = $this->subject->typoLink_URL(['parameter' => rawurlencode($testFileLink)]);
 
         $this->assertEquals($expectedUrl, $generatedUrl);
@@ -399,5 +412,28 @@ class ContentObjectRendererTest extends UnitTestCase
             );
 
         return $testData;
+    }
+
+    /**
+     * @param array $configuration
+     * @return array
+     */
+    protected function buildConfiguration(array $configuration)
+    {
+        if (!isset($configuration['jumpurl']) || version_compare(TYPO3_version, '8', '<')) {
+            return $configuration;
+        }
+
+        $configuration['typolinkConfiguration.'] = [
+            'jumpurl' => $configuration['jumpurl'],
+        ];
+        unset($configuration['jumpurl']);
+
+        if (isset($configuration['jumpurl.'])) {
+            $configuration['typolinkConfiguration.']['jumpurl.'] = $configuration['jumpurl.'];
+            unset($configuration['jumpurl.']);
+        }
+
+        return $configuration;
     }
 }
