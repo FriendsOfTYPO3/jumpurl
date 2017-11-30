@@ -44,7 +44,7 @@ class JumpUrlHandler implements UrlHandlerInterface
     public function canHandleCurrentUrl()
     {
         $this->url = (string)GeneralUtility::_GP('jumpurl');
-        return ($this->url !== '');
+        return $this->url !== '';
     }
 
     /**
@@ -59,7 +59,6 @@ class JumpUrlHandler implements UrlHandlerInterface
      *
      * @see \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController::processCustomUrlHandlers()
      * @throws \RuntimeException if Jump URL was triggered by an illegal referrer.
-     * @return void
      */
     public function handle()
     {
@@ -88,9 +87,8 @@ class JumpUrlHandler implements UrlHandlerInterface
 
         $referrer = parse_url(GeneralUtility::getIndpEnv('HTTP_REFERER'));
         // everything is fine if no host is set, or the host matches the TYPO3_HOST
-        return (!isset($referrer['host']) || $referrer['host'] === GeneralUtility::getIndpEnv('TYPO3_HOST_ONLY'));
+        return !isset($referrer['host']) || $referrer['host'] === GeneralUtility::getIndpEnv('TYPO3_HOST_ONLY');
     }
-
 
     /**
      * Redirects the user to the given jump URL if all submitted values
@@ -107,7 +105,7 @@ class JumpUrlHandler implements UrlHandlerInterface
         if (is_array($pageTSconfig['TSFE.'])) {
             $pageTSconfig = $pageTSconfig['TSFE.'];
         } else {
-            $pageTSconfig = array();
+            $pageTSconfig = [];
         }
 
         $jumpUrl = $this->addParametersToTransferSession($jumpUrl, $pageTSconfig);

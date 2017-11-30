@@ -14,13 +14,14 @@ namespace FoT3\Jumpurl\Tests\Unit;
  * The TYPO3 project - inspiring people to share!
  */
 
+use Nimut\TestingFramework\TestCase\UnitTestCase;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
  * Testcase for handling jump URLs when given with a test parameter
  */
-class JumpUrlProcessorTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
+class JumpUrlProcessorTest extends UnitTestCase
 {
     /**
      * @var \PHPUnit_Framework_MockObject_MockObject|ContentObjectRenderer
@@ -55,13 +56,13 @@ class JumpUrlProcessorTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
 
         $this->jumpUrlProcessor = $this->getMock(
             JumpUrlProcessorMock::class,
-            array('getTypoScriptFrontendController', 'getContentObjectRenderer')
+            ['getTypoScriptFrontendController', 'getContentObjectRenderer']
         );
 
         $this->tsfe = $this->getAccessibleMock(
             TypoScriptFrontendController::class,
-            array('getPagesTSconfig'),
-            array(),
+            ['getPagesTSconfig'],
+            [],
             '',
             false
         );
@@ -85,16 +86,16 @@ class JumpUrlProcessorTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
 
         $jumpUrlSecureParameters = $this->jumpUrlProcessor->getParametersForSecureFile(
             '/fileadmin/a/test/file.txt',
-            array('mimeTypes' => 'dummy=application/x-executable,txt=text/plain')
+            ['mimeTypes' => 'dummy=application/x-executable,txt=text/plain']
         );
 
         $this->assertSame(
-            array(
+            [
                 'juSecure' => 1,
                 'locationData' => '456:tt_content:123',
                 'mimeType' => 'text/plain',
                 'juHash' => '1cccb7f01c8a3f58ee890377b5de9bdc05115a37',
-            ),
+            ],
             $jumpUrlSecureParameters
         );
     }

@@ -14,18 +14,20 @@ namespace FoT3\Jumpurl\Tests\Unit;
  * The TYPO3 project - inspiring people to share!
  */
 
+use FoT3\Jumpurl\JumpUrlHandler;
+use FoT3\Jumpurl\JumpUrlUtility;
+use Nimut\TestingFramework\TestCase\UnitTestCase;
 use TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Utility\HttpUtility;
 use TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
-use FoT3\Jumpurl\JumpUrlHandler;
 
 /**
  * Testcase for handling jump URLs when given with a test parameter
  */
-class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
+class JumpUrlHandlerTest extends UnitTestCase
 {
     /**
      * The default location data used for JumpUrl secure.
@@ -55,13 +57,13 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
 
         $this->jumpUrlHandler = $this->getMock(
             JumpUrlHandler::class,
-            array('isLocationDataValid', 'getResourceFactory', 'getTypoScriptFrontendController', 'readFileAndExit', 'redirect')
+            ['isLocationDataValid', 'getResourceFactory', 'getTypoScriptFrontendController', 'readFileAndExit', 'redirect']
         );
 
         $this->tsfe = $this->getAccessibleMock(
             TypoScriptFrontendController::class,
-            array('getPagesTSconfig'),
-            array(),
+            ['getPagesTSconfig'],
+            [],
             '',
             false
         );
@@ -77,28 +79,28 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
      */
     public function jumpUrlDefaultValidParametersDataProvider()
     {
-        return array(
-            'File with spaces and ampersands' => array(
+        return [
+            'File with spaces and ampersands' => [
                 '691dbf63a21181e2d69bf78e61f1c9fd023aef2c',
                 str_replace('%2F', '/', rawurlencode('typo3temp/phpunitJumpUrlTestFile with spaces & amps.txt')),
-            ),
-            'External URL' => array(
+            ],
+            'External URL' => [
                 '7d2261b12682a4b73402ae67415e09f294b29a55',
                 'http://www.mytesturl.tld',
-            ),
-            'External URL with GET parameters' => array(
+            ],
+            'External URL with GET parameters' => [
                 'cfc95f583da7689238e98bbc8930ebd820f0d20f',
                 'http://external.domain.tld?parameter1=' . rawurlencode('parameter[data]with&a lot-of-special/chars'),
-            ),
-            'External URL without www' => array(
+            ],
+            'External URL without www' => [
                 '8591c573601d17f37e06aff4ac14c78f107dd49e',
                 'http://external.domain.tld',
-            ),
-            'Mailto link' => array(
+            ],
+            'Mailto link' => [
                 'bd82328dc40755f5d0411e2e16e7c0cbf33b51b7',
                 'mailto:mail@ddress.tld',
-            )
-        );
+            ]
+        ];
     }
 
     /**
@@ -178,20 +180,20 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
      */
     public function jumpUrlSecureValidParametersDataProvider()
     {
-        return array(
-            array(
+        return [
+            [
                 '1933f3c181db8940acfcd4d16c74643947179948',
                 'typo3temp/phpunitJumpUrlTestFile.txt',
-            ),
-            array(
+            ],
+            [
                 '304b8c8e022e92e6f4d34e97395da77705830818',
                 str_replace('%2F', '/', rawurlencode('typo3temp/phpunitJumpUrlTestFile with spaces & amps.txt')),
-            ),
-            array(
+            ],
+            [
                 '304b8c8e022e92e6f4d34e97395da77705830818',
                 str_replace('%2F', '/', rawurlencode('typo3temp/phpunitJumpUrlTestFile with spaces & amps.txt')),
-            )
-        );
+            ]
+        ];
     }
 
     /**
@@ -205,8 +207,8 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $_GET['jumpurl'] = $jumpUrl;
         $this->prepareJumpUrlSecureTest($hash);
 
-        $fileMock = $this->getMock(File::class, array('dummy'), array(), '', false);
-        $resourceFactoryMock = $this->getMock(ResourceFactory::class, array('retrieveFileOrFolderObject'));
+        $fileMock = $this->getMock(File::class, ['dummy'], [], '', false);
+        $resourceFactoryMock = $this->getMock(ResourceFactory::class, ['retrieveFileOrFolderObject']);
 
         $resourceFactoryMock->expects($this->once())
             ->method('retrieveFileOrFolderObject')
@@ -242,7 +244,7 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $_GET['jumpurl'] = $jumpUrl;
         $this->prepareJumpUrlSecureTest($hash);
 
-        $resourceFactoryMock = $this->getMock(ResourceFactory::class, array('retrieveFileOrFolderObject'));
+        $resourceFactoryMock = $this->getMock(ResourceFactory::class, ['retrieveFileOrFolderObject']);
         $resourceFactoryMock->expects($this->once())
             ->method('retrieveFileOrFolderObject')
             ->will($this->throwException(new FileDoesNotExistException()));
@@ -290,7 +292,9 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
      * @param string $hash
      * @param string $jumpUrl
      */
-    public function jumpUrlSecureFailsOnInvalidHash($hash, $jumpUrl
+    public function jumpUrlSecureFailsOnInvalidHash(
+        $hash,
+        $jumpUrl
     ) {
         $_GET['juSecure'] = '1';
         $_GET['juHash'] = $hash . '1';
@@ -305,17 +309,17 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
      */
     public function jumpUrlSecureFailsOnForbiddenFileLocationDataProvider()
     {
-        return array(
-            'totally forbidden' => array(
+        return [
+            'totally forbidden' => [
                 '/a/totally/forbidden/path'
-            ),
-            'typo3conf file' => array(
+            ],
+            'typo3conf file' => [
                 PATH_site . '/typo3conf/path'
-            ),
-            'file with forbidden character' => array(
+            ],
+            'file with forbidden character' => [
                 PATH_site . '/mypath/test.php'
-            )
-        );
+            ]
+        ];
     }
 
     /**
@@ -323,7 +327,6 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
      * @dataProvider jumpUrlSecureFailsOnForbiddenFileLocationDataProvider
      * @expectedException \Exception
      * @expectedExceptionCode 1294585194
-     * @param string $path
      * @param string $path
      */
     public function jumpUrlSecureFailsOnForbiddenFileLocation($path)
@@ -333,8 +336,7 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
             ->with('')
             ->will($this->returnValue(true));
 
-
-        $hash = \FoT3\Jumpurl\JumpUrlUtility::calculateHashSecure($path, '', '');
+        $hash = JumpUrlUtility::calculateHashSecure($path, '', '');
 
         $_GET['jumpurl'] = $path;
         $_GET['juSecure'] = '1';
@@ -347,7 +349,6 @@ class JumpUrlHandlerTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
 
     /**
      * @param string $hash
-     * @return void
      */
     protected function prepareJumpUrlSecureTest($hash)
     {

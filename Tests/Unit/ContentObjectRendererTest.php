@@ -14,6 +14,9 @@ namespace FoT3\Jumpurl\Tests\Unit;
  * The TYPO3 project - inspiring people to share!
  */
 
+use FoT3\Jumpurl\JumpUrlHandler;
+use FoT3\Jumpurl\JumpUrlProcessor;
+use Nimut\TestingFramework\TestCase\UnitTestCase;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Charset\CharsetConverter;
 use TYPO3\CMS\Core\Database\DatabaseConnection;
@@ -24,18 +27,16 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Page\PageRepository;
-use FoT3\Jumpurl\JumpUrlHandler;
-use FoT3\Jumpurl\JumpUrlProcessor;
 
 /**
  * Testcase for the jumpurl processing in TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer.
  */
-class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
+class ContentObjectRendererTest extends UnitTestCase
 {
     /**
      * @var array A backup of registered singleton instances
      */
-    protected $singletonInstances = array();
+    protected $singletonInstances = [];
 
     /**
      * @var \PHPUnit_Framework_MockObject_MockObject|\TYPO3\CMS\Core\Tests\AccessibleObjectInterface|\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer
@@ -60,21 +61,21 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $this->singletonInstances = GeneralUtility::getSingletonInstances();
         $this->createMockedLoggerAndLogManager();
 
-        $this->templateServiceMock = $this->getMock(TemplateService::class, array('getFileName'));
-        $pageRepositoryMock = $this->getMock(PageRepository::class, array('getPage'));
+        $this->templateServiceMock = $this->getMock(TemplateService::class, ['getFileName']);
+        $pageRepositoryMock = $this->getMock(PageRepository::class, ['getPage']);
 
-        $this->typoScriptFrontendControllerMock = $this->getAccessibleMock(TypoScriptFrontendController::class, array('dummy'), array(), '', false);
+        $this->typoScriptFrontendControllerMock = $this->getAccessibleMock(TypoScriptFrontendController::class, ['dummy'], [], '', false);
         $this->typoScriptFrontendControllerMock->tmpl = $this->templateServiceMock;
-        $this->typoScriptFrontendControllerMock->config = array();
-        $this->typoScriptFrontendControllerMock->page = array();
+        $this->typoScriptFrontendControllerMock->config = [];
+        $this->typoScriptFrontendControllerMock->page = [];
         $this->typoScriptFrontendControllerMock->sys_page = $pageRepositoryMock;
         $this->typoScriptFrontendControllerMock->csConvObj = new CharsetConverter();
         $this->typoScriptFrontendControllerMock->renderCharset = 'utf-8';
         $GLOBALS['TSFE'] = $this->typoScriptFrontendControllerMock;
 
-        $GLOBALS['TT'] = $this->getMock(TimeTracker::class, array('dummy'));
+        $GLOBALS['TT'] = $this->getMock(TimeTracker::class, ['dummy']);
 
-        $GLOBALS['TYPO3_DB'] = $this->getMock(DatabaseConnection::class, array());
+        $GLOBALS['TYPO3_DB'] = $this->getMock(DatabaseConnection::class, []);
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] = '12345';
 
         $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['urlProcessing']['urlProcessors']['jumpurl']['processor'] = JumpUrlProcessor::class;
@@ -82,10 +83,10 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
 
         $this->subject = $this->getAccessibleMock(
             ContentObjectRenderer::class,
-            array('getResourceFactory', 'getEnvironmentVariable'),
-            array($this->typoScriptFrontendControllerMock)
+            ['getResourceFactory', 'getEnvironmentVariable'],
+            [$this->typoScriptFrontendControllerMock]
         );
-        $this->subject->start(array(), 'tt_content');
+        $this->subject->start([], 'tt_content');
     }
 
     protected function tearDown()
@@ -109,7 +110,9 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $expectedHash = '304b8c8e022e92e6f4d34e97395da77705830818';
         $expectedLink = htmlspecialchars($testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode(str_replace('%2F', '/', rawurlencode($relativeFileNameAndPath))) . '&juSecure=1&locationData=' . rawurlencode($testData['locationData']) . '&juHash=' . $expectedHash);
 
-        $result = $this->subject->filelink($fileName, array('path' => 'typo3temp/', 'jumpurl' => '1', 'jumpurl.' => array('secure' => 1)));
+        chdir(PATH_site);
+
+        $result = $this->subject->filelink($fileName, $this->buildConfiguration(['path' => 'typo3temp/', 'jumpurl' => '1', 'jumpurl.' => ['secure' => 1]]));
         $this->assertEquals('<a href="' . $expectedLink . '">' . $fileName . '</a>', $result);
 
         GeneralUtility::unlink_tempfile($fileNameAndPath);
@@ -130,7 +133,9 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $expectedHash = '1933f3c181db8940acfcd4d16c74643947179948';
         $expectedLink = htmlspecialchars($testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode($relativeFileNameAndPath) . '&juSecure=1&locationData=' . rawurlencode($testData['locationData']) . '&juHash=' . $expectedHash);
 
-        $result = $this->subject->filelink($fileName, array('path' => 'typo3temp/', 'jumpurl' => '1', 'jumpurl.' => array('secure' => 1)));
+        chdir(PATH_site);
+
+        $result = $this->subject->filelink($fileName, $this->buildConfiguration(['path' => 'typo3temp/', 'jumpurl' => '1', 'jumpurl.' => ['secure' => 1]]));
         $this->assertEquals('<a href="' . $expectedLink . '">' . $fileName . '</a>', $result);
 
         GeneralUtility::unlink_tempfile($fileNameAndPath);
@@ -150,8 +155,10 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $expectedLink = $testData['absRefPrefix'] . $fileNameAndPath;
         $expectedLink = '<a href="' . $expectedLink . '">' . $fileName . '</a>';
 
+        chdir(PATH_site);
+
         // Test with deprecated configuration, TODO: remove when deprecated code is removed!
-        $result = $this->subject->filelink($fileName, array('path' => 'typo3temp/', 'jumpurl' => 0));
+        $result = $this->subject->filelink($fileName, $this->buildConfiguration(['path' => 'typo3temp/', 'jumpurl' => 0]));
         $this->assertEquals($expectedLink, $result);
 
         GeneralUtility::unlink_tempfile($fileNameAndPath);
@@ -171,8 +178,10 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $expectedLink = $testData['absRefPrefix'] . $fileNameAndPath;
         $expectedLink = '<a href="' . $expectedLink . '">' . $fileName . '</a>';
 
+        chdir(PATH_site);
+
         // Test with deprecated configuration
-        $result = $this->subject->filelink($fileName, array('path' => 'typo3temp/', 'jumpurl' => 0));
+        $result = $this->subject->filelink($fileName, $this->buildConfiguration(['path' => 'typo3temp/', 'jumpurl' => 0]));
         $this->assertEquals($expectedLink, $result);
 
         GeneralUtility::unlink_tempfile($fileNameAndPath);
@@ -195,7 +204,9 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         // the first part of the link is encoded which does not make much sense.
         $expectedLink = htmlspecialchars($expectedLinkFirstPart . $expectedLinkSecondPart);
 
-        $result = $this->subject->http_makelinks('teststring ' . $testUrl . ' anotherstring', array('keep' => 'scheme'));
+        chdir(PATH_site);
+
+        $result = $this->subject->http_makelinks('teststring ' . $testUrl . ' anotherstring', ['keep' => 'scheme']);
         $this->assertEquals('teststring <a href="' . $expectedLink . '">' . $testUrl . '</a> anotherstring', $result);
     }
 
@@ -210,7 +221,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $testMailto = 'mailto:' . $testMail;
         $expectedHash = 'bd82328dc40755f5d0411e2e16e7c0cbf33b51b7';
         $expectedLink = htmlspecialchars($testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode($testMailto) . '&juHash=' . $expectedHash);
-        $result = $this->subject->mailto_makelinks('teststring ' . $testMailto . ' anotherstring', array());
+        $result = $this->subject->mailto_makelinks('teststring ' . $testMailto . ' anotherstring', []);
 
         $this->assertEquals('teststring <a href="' . $expectedLink . '">' . $testMail . '</a> anotherstring', $result);
     }
@@ -225,7 +236,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $testAddress = 'http://external.domain.tld';
         $expectedHash = '8591c573601d17f37e06aff4ac14c78f107dd49e';
         $expectedUrl = $testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode($testAddress) . '&juHash=' . $expectedHash;
-        $generatedUrl = $this->subject->typoLink_URL(array('parameter' => $testAddress));
+        $generatedUrl = $this->subject->typoLink_URL(['parameter' => $testAddress]);
 
         $this->assertEquals($expectedUrl, $generatedUrl);
     }
@@ -240,7 +251,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $testAddress = 'http://external.domain.tld?parameter1=' . rawurlencode('parameter[data]with&a lot-of-special/chars');
         $expectedHash = 'cfc95f583da7689238e98bbc8930ebd820f0d20f';
         $expectedUrl = $testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode($testAddress) . '&juHash=' . $expectedHash;
-        $generatedUrl = $this->subject->typoLink_URL(array('parameter' => $testAddress));
+        $generatedUrl = $this->subject->typoLink_URL(['parameter' => $testAddress]);
 
         $this->assertEquals($expectedUrl, $generatedUrl);
     }
@@ -259,7 +270,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $testAddress = $relativeFileNameAndPath;
         $expectedHash = 'e36be153c32f4d4d0db1414e47a05cf3149923ae';
         $expectedUrl = $testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode($testAddress) . '&juHash=' . $expectedHash;
-        $generatedUrl = $this->subject->typoLink_URL(array('parameter' => $testAddress));
+        $generatedUrl = $this->subject->typoLink_URL(['parameter' => $testAddress]);
 
         $this->assertEquals($expectedUrl, $generatedUrl);
 
@@ -280,7 +291,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $testFileLink = $relativeFileNameAndPath;
         $expectedHash = '691dbf63a21181e2d69bf78e61f1c9fd023aef2c';
         $expectedUrl = $testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode(str_replace('%2F', '/', rawurlencode($testFileLink))) . '&juHash=' . $expectedHash;
-        $generatedUrl = $this->subject->typoLink_URL(array('parameter' => str_replace('%2F', '/', rawurlencode($testFileLink))));
+        $generatedUrl = $this->subject->typoLink_URL(['parameter' => str_replace('%2F', '/', rawurlencode($testFileLink))]);
 
         $this->assertEquals($expectedUrl, $generatedUrl);
 
@@ -301,7 +312,10 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $testFileLink = $relativeFileNameAndPath;
         $expectedHash = '691dbf63a21181e2d69bf78e61f1c9fd023aef2c';
         $expectedUrl = $testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode(str_replace('%2F', '/', rawurlencode($testFileLink))) . '&juHash=' . $expectedHash;
-        $generatedUrl = $this->subject->typoLink_URL(array('parameter' => rawurlencode($testFileLink)));
+
+        chdir(PATH_site);
+
+        $generatedUrl = $this->subject->typoLink_URL(['parameter' => rawurlencode($testFileLink)]);
 
         $this->assertEquals($expectedUrl, $generatedUrl);
 
@@ -318,7 +332,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $testAddress = 'mail@ddress.tld';
         $expectedHash = 'bd82328dc40755f5d0411e2e16e7c0cbf33b51b7';
         $expectedUrl = $testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode('mailto:' . $testAddress) . '&juHash=' . $expectedHash;
-        $generatedUrl = $this->subject->typoLink_URL(array('parameter' => $testAddress));
+        $generatedUrl = $this->subject->typoLink_URL(['parameter' => $testAddress]);
 
         $this->assertEquals($expectedUrl, $generatedUrl);
     }
@@ -337,7 +351,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $testAddress = $relativeFileNameAndPath;
         $expectedHash = '1933f3c181db8940acfcd4d16c74643947179948';
         $expectedUrl = $testData['absRefPrefix'] . $testData['mainScript'] . '?id=' . $testData['pageId'] . '&type=' . $testData['pageType'] . '&jumpurl=' . rawurlencode($testAddress) . '&juSecure=1&locationData=' . rawurlencode($testData['locationData']) . '&juHash=' . $expectedHash;
-        $generatedUrl = $this->subject->typoLink_URL(array('parameter' => $testAddress, 'jumpurl.' => array('secure' => 1)));
+        $generatedUrl = $this->subject->typoLink_URL(['parameter' => $testAddress, 'jumpurl.' => ['secure' => 1]]);
 
         $this->assertEquals($expectedUrl, $generatedUrl);
 
@@ -371,7 +385,7 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
             $expectedGetPageCalls = $this->once();
         }
 
-        $testData = array();
+        $testData = [];
 
         $this->typoScriptFrontendControllerMock->config['config']['jumpurl_enable'] = true;
 
@@ -386,16 +400,40 @@ class ContentObjectRendererTest extends \TYPO3\CMS\Core\Tests\UnitTestCase
         $pageRepositoryMock = $this->typoScriptFrontendControllerMock->sys_page;
         $pageRepositoryMock->expects($expectedGetPageCalls)
             ->method('getPage')
-            ->will($this->returnValue(
-                array(
+            ->will(
+                $this->returnValue(
+                [
                     'uid' => $testData['pageId'],
-                    'doktype' => \TYPO3\CMS\Frontend\Page\PageRepository::DOKTYPE_DEFAULT,
+                    'doktype' => PageRepository::DOKTYPE_DEFAULT,
                     'url_scheme' => 0,
                     'title' => 'testpage',
-                )
+                ]
             )
             );
 
         return $testData;
+    }
+
+    /**
+     * @param array $configuration
+     * @return array
+     */
+    protected function buildConfiguration(array $configuration)
+    {
+        if (!isset($configuration['jumpurl']) || version_compare(TYPO3_version, '8', '<')) {
+            return $configuration;
+        }
+
+        $configuration['typolinkConfiguration.'] = [
+            'jumpurl' => $configuration['jumpurl'],
+        ];
+        unset($configuration['jumpurl']);
+
+        if (isset($configuration['jumpurl.'])) {
+            $configuration['typolinkConfiguration.']['jumpurl.'] = $configuration['jumpurl.'];
+            unset($configuration['jumpurl.']);
+        }
+
+        return $configuration;
     }
 }
