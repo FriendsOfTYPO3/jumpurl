@@ -1,0 +1,22 @@
+2017-11-30         [RELEASE] Release of jumpurl 7.7.1 (Nicole Cordes)
+2017-11-23 9b1780b [BUGFIX] Fix unit tests (Nicole Cordes)
+2017-11-23 94aa0b4 [FEATURE] Execute unit tests on Travis CI (Nicole Cordes)
+2017-11-23 5f76ec7 [FEATURE] Add basic Travis CI configuration (Nicole Cordes)
+2017-11-23 354f311 [TASK] Fix coding style according to php-cs-fixer (Nicole Cordes)
+2017-11-23 ce7f713 [FEATURE] Add StyleCI configuration (Nicole Cordes)
+2017-11-23 a47a604 [FEATURE] Include PHP CS Fixer configuration (Nicole Cordes)
+2017-11-23 c87a8c6 [TASK] Add .gitattributes file (Nicole Cordes)
+2017-11-23 5708d8d [TASK] Add .gitignore file (Nicole Cordes)
+2017-10-18 9aa7cc6 Add correct replace properties (Alexander Grein)
+
+2017-05-02         [RELEASE] Release of jumpurl 7.7.0
+2017-05-02 224aa68 [TASK] Add support for TYPO3 v8 LTS (Benni Mack)
+2015-11-03 ef1aa33 [TASK] Provide documentation Settings.cfg (Helmut Hummel)
+
+2015-10-28         [RELEASE] Release of jumpurl 7.6.0
+2015-10-28 c121859 [TASK] Added license information (Benjamin Mack)
+2015-10-28 220c8db [TASK] Change PHP namespace of EXT:jumpurl to FoT3 (Benjamin Mack)
+2015-10-09 a350127 [TASK] Make TYPO3 Core PSR-2 standard compliant (TYPO3 Release Team)
+2015-09-29 7a2fd6f [TASK] Update TYPO3 version to TYPO3 7.6-dev (Wouter Wolters)
+2015-09-23 d6a7f88 [BUGFIX] Adjust visibility of setUp() and tearDown() (Helmut Hummel)
+2015-09-21 098d743 [TASK] Change typo3.org links to https (Josef Glatz)

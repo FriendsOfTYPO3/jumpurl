@@ -15,7 +15,7 @@
 	},
 	"replace": {
 		"jumpurl": "self.version",
-    		"typo3-ter/jumpurl": "self.version"
+		"typo3-ter/jumpurl": "self.version"
 	},
 	"autoload": {
 		"psr-4": {
