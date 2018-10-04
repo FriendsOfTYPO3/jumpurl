@@ -200,9 +200,5 @@ jumpurl.secure.mimeTypes
 TYPO3_CONF_VARS
 ^^^^^^^^^^^^^^^
 
-The setting :php:`$GLOBALS['TYPO3_CONF_VARS']['SYS']['doNotCheckReferer']` can be used to disable
-the referer check during jumpurl handling. By default the referring host must match the current
-host, otherwise processing is stopped.
-
 The setting :php:`$GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey']` is used for generating
 the hashes submitted in the URLs.
