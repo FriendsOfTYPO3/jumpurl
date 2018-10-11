@@ -108,6 +108,9 @@ class JumpUrlHandler implements UrlHandlerInterface
             $pageTSconfig = [];
         }
 
+        // Allow spaces / special chars in url
+        $jumpUrl = rawurldecode($jumpUrl);
+
         $jumpUrl = $this->addParametersToTransferSession($jumpUrl, $pageTSconfig);
         $statusCode = $this->getRedirectStatusCode($pageTSconfig);
         $this->redirect($jumpUrl, $statusCode);
