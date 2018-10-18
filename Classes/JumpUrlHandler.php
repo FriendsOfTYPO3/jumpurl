@@ -23,7 +23,6 @@ use TYPO3\CMS\Frontend\Http\UrlHandlerInterface;
 /**
  * This class implements the hooks for the JumpURL functionality when accessing a page
  * which has a GET parameter "jumpurl".
- * It then validates the referrer
  */
 class JumpUrlHandler implements UrlHandlerInterface
 {
@@ -58,36 +57,14 @@ class JumpUrlHandler implements UrlHandlerInterface
      * This hook will be called BEFORE the user is redirected to an external URL configured in the page properties.
      *
      * @see \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController::processCustomUrlHandlers()
-     * @throws \RuntimeException if Jump URL was triggered by an illegal referrer.
      */
     public function handle()
     {
-        if (!$this->referrerIsValid()) {
-            throw new \RuntimeException('The jumpUrl request was triggered by an illegal referrer.');
-        }
-
         if ((bool)GeneralUtility::_GP('juSecure')) {
             $this->forwardJumpUrlSecureFileData($this->url);
         } else {
             $this->redirectToJumpUrl($this->url);
         }
-    }
-
-    /**
-     * Returns TRUE if the current referrer allows Jump URL handling.
-     * This is the case then the referrer check is disabled or when the referrer matches the current TYPO3 host.
-     *
-     * @return bool if the referer is valid.
-     */
-    protected function referrerIsValid()
-    {
-        if (!empty($GLOBALS['TYPO3_CONF_VARS']['SYS']['doNotCheckReferer'])) {
-            return true;
-        }
-
-        $referrer = parse_url(GeneralUtility::getIndpEnv('HTTP_REFERER'));
-        // everything is fine if no host is set, or the host matches the TYPO3_HOST
-        return !isset($referrer['host']) || $referrer['host'] === GeneralUtility::getIndpEnv('TYPO3_HOST_ONLY');
     }
 
     /**
