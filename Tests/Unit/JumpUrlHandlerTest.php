@@ -96,6 +96,10 @@ class JumpUrlHandlerTest extends UnitTestCase
                 '8591c573601d17f37e06aff4ac14c78f107dd49e',
                 'http://external.domain.tld',
             ],
+            'URL with section' => [
+                '3723eefe766e38f9a2ea8d2cd84f6519d7d30b75',
+                str_replace('%23', '#','http://external.domain.tld/' . rawurlencode('#c123')),
+            ],
             'Mailto link' => [
                 'bd82328dc40755f5d0411e2e16e7c0cbf33b51b7',
                 'mailto:mail@ddress.tld',

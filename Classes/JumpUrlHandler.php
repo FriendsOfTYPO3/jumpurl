@@ -108,6 +108,9 @@ class JumpUrlHandler implements UrlHandlerInterface
             $pageTSconfig = [];
         }
 
+        // Allow sections in links
+        $jumpUrl = str_replace('%23', '#', $jumpUrl);
+
         $jumpUrl = $this->addParametersToTransferSession($jumpUrl, $pageTSconfig);
         $statusCode = $this->getRedirectStatusCode($pageTSconfig);
         $this->redirect($jumpUrl, $statusCode);
