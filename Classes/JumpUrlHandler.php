@@ -125,7 +125,11 @@ class JumpUrlHandler implements UrlHandlerInterface
 
         // Deny access to files that match TYPO3_CONF_VARS[SYS][fileDenyPattern] and whose parent directory
         // is typo3conf/ (there could be a backup file in typo3conf/ which does not match against the fileDenyPattern)
-        $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl), false);
+        if (version_compare(TYPO3_version, '8.0', '<')) {
+            $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl), false);
+        } else {
+            $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl));
+        }
 
         if (
             !GeneralUtility::isAllowedAbsPath($absoluteFileName)
