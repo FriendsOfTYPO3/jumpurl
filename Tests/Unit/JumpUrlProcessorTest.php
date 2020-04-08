@@ -54,11 +54,6 @@ class JumpUrlProcessorTest extends UnitTestCase
 
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] = '12345';
 
-        $this->jumpUrlProcessor = $this->getMock(
-            JumpUrlProcessorMock::class,
-            ['getTypoScriptFrontendController', 'getContentObjectRenderer']
-        );
-
         $this->tsfe = $this->getAccessibleMock(
             TypoScriptFrontendController::class,
             ['getPagesTSconfig'],
@@ -66,14 +61,9 @@ class JumpUrlProcessorTest extends UnitTestCase
             '',
             false
         );
-        $this->jumpUrlProcessor->expects($this->any())
-            ->method('getTypoScriptFrontendController')
-            ->will($this->returnValue($this->tsfe));
 
-        $this->contentObjectRenderer = $this->getMock(ContentObjectRenderer::class);
-        $this->jumpUrlProcessor->expects($this->any())
-            ->method('getContentObjectRenderer')
-            ->will($this->returnValue($this->contentObjectRenderer));
+        $this->contentObjectRenderer = new ContentObjectRenderer($this->tsfe);
+        $this->jumpUrlProcessor = new JumpUrlProcessorMock($this->tsfe, $this->contentObjectRenderer);
     }
 
     /**

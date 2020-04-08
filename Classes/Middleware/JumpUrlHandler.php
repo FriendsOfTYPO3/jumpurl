@@ -1,5 +1,5 @@
 <?php
-namespace FoT3\Jumpurl;
+namespace FoT3\Jumpurl\Middleware;
 
 /*
  * This file is part of the TYPO3 CMS project.
@@ -14,83 +14,83 @@ namespace FoT3\Jumpurl;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Resource\FileInterface;
+use FoT3\Jumpurl\JumpUrlUtility;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use TYPO3\CMS\Core\Core\Environment;
+use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
+use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\HttpUtility;
-use TYPO3\CMS\Frontend\Http\UrlHandlerInterface;
+use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
  * This class implements the hooks for the JumpURL functionality when accessing a page
  * which has a GET parameter "jumpurl".
+ *
+ * If a valid hash was submitted the user will either be redirected
+ * to the given jumpUrl or if it is a secure jumpUrl the file data
+ * will be passed to the user.
+ *
+ * This middleware needs to take care of redirecting the user or generating custom output.
+ * This middleware will be executed BEFORE the user is redirected to an external URL configured in the page properties.
  */
-class JumpUrlHandler implements UrlHandlerInterface
+class JumpUrlHandler implements MiddlewareInterface
 {
     /**
-     * @var string The current JumpURL value submitted in the GET parameters.
+     * @var TimeTracker
      */
-    protected $url;
+    protected $timeTracker;
 
     /**
-     * Return TRUE if this hook handles the current URL.
-     * Warning! If TRUE is returned content rendering will be disabled!
-     * This method will be called in the constructor of the TypoScriptFrontendController
-     *
-     * @see \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController::__construct()
-     * @see \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController::initializeCustomUrlHandlers()
-     * @return bool
+     * @var TypoScriptFrontendController
      */
-    public function canHandleCurrentUrl()
+    protected $typoScriptFrontendController;
+
+    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, TimeTracker $timeTracker = null)
     {
-        $this->url = (string)GeneralUtility::_GP('jumpurl');
-        return $this->url !== '';
+        $this->typoScriptFrontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
+        $this->timeTracker = $timeTracker ?? GeneralUtility::makeInstance(TimeTracker::class);
     }
 
-    /**
-     * Custom processing of the current URL.
-     *
-     * If a valid hash was submitted the user will either be redirected
-     * to the given jumpUrl or if it is a secure jumpUrl the file data
-     * will be passed to the user.
-     *
-     * If canHandle() has returned TRUE this method needs to take care of redirecting the user or generating custom output.
-     * This hook will be called BEFORE the user is redirected to an external URL configured in the page properties.
-     *
-     * @see \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController::processCustomUrlHandlers()
-     */
-    public function handle()
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        if ((bool)GeneralUtility::_GP('juSecure')) {
-            $this->forwardJumpUrlSecureFileData($this->url);
-        } else {
-            $this->redirectToJumpUrl($this->url);
+        $jumpUrl = (string)$request->getQueryParams()['jumpurl'] ?? '';
+        if (!empty($jumpUrl)) {
+            $juHash = (string)$request->getQueryParams()['juHash'] ?? '';
+            if (!empty($request->getQueryParams()['juSecure'])) {
+                $locationData = (string)$request->getQueryParams()['locationData'] ?? '';
+                $mimeType = (string)$request->getQueryParams()['mimeType'] ?? '';
+                return $this->forwardJumpUrlSecureFileData($jumpUrl, $locationData, $mimeType, $juHash);
+            }
+            // Regular jump URL
+            $this->validateIfJumpUrlRedirectIsAllowed($jumpUrl, $juHash);
+            return $this->redirectToJumpUrl($jumpUrl);
         }
+        return $handler->handle($request);
     }
-
     /**
      * Redirects the user to the given jump URL if all submitted values
-     * are valid
+     * are valid (checked before)
      *
      * @param string $jumpUrl The URL to which the user should be redirected
      * @throws \Exception
+     * @return ResponseInterface
      */
-    protected function redirectToJumpUrl($jumpUrl)
+    protected function redirectToJumpUrl(string $jumpUrl): ResponseInterface
     {
-        $this->validateIfJumpUrlRedirectIsAllowed($jumpUrl);
-
         $pageTSconfig = $this->getTypoScriptFrontendController()->getPagesTSconfig();
-        if (is_array($pageTSconfig['TSFE.'])) {
-            $pageTSconfig = $pageTSconfig['TSFE.'];
-        } else {
-            $pageTSconfig = [];
-        }
+        $pageTSconfig = is_array($pageTSconfig['TSFE.']) ? $pageTSconfig['TSFE.'] : [];
 
         // Allow sections in links
         $jumpUrl = str_replace('%23', '#', $jumpUrl);
-
         $jumpUrl = $this->addParametersToTransferSession($jumpUrl, $pageTSconfig);
+
         $statusCode = $this->getRedirectStatusCode($pageTSconfig);
-        $this->redirect($jumpUrl, $statusCode);
+        return new RedirectResponse($jumpUrl, $statusCode);
     }
 
     /**
@@ -99,18 +99,14 @@ class JumpUrlHandler implements UrlHandlerInterface
      * be output to the user.
      *
      * @param string $jumpUrl The URL to the file that should be output to the user
+     * @param string $locationData locationData GET parameter, containing information about the record that created the URL
+     * @param string $mimeType The optional mimeType GET parameter
+     * @param string $juHash jump Url Hash GET parameter
+     * @return ResponseInterface
      * @throws \Exception
      */
-    protected function forwardJumpUrlSecureFileData($jumpUrl)
+    protected function forwardJumpUrlSecureFileData(string $jumpUrl, string $locationData, string $mimeType, string $juHash): ResponseInterface
     {
-        // Set the parameters required for handling a secure jumpUrl link
-        // The locationData GET parameter, containing information about the record that created the URL
-        $locationData = (string)GeneralUtility::_GP('locationData');
-        // The optional mimeType GET parameter
-        $mimeType = (string)GeneralUtility::_GP('mimeType');
-        // The jump Url Hash GET parameter
-        $juHash = (string)GeneralUtility::_GP('juHash');
-
         // validate the hash GET parameter against the other parameters
         if ($juHash !== JumpUrlUtility::calculateHashSecure($jumpUrl, $locationData, $mimeType)) {
             throw new \Exception('The calculated Jump URL secure hash ("juHash") did not match the submitted "juHash" query parameter.', 1294585196);
@@ -125,16 +121,11 @@ class JumpUrlHandler implements UrlHandlerInterface
 
         // Deny access to files that match TYPO3_CONF_VARS[SYS][fileDenyPattern] and whose parent directory
         // is typo3conf/ (there could be a backup file in typo3conf/ which does not match against the fileDenyPattern)
-        if (version_compare(TYPO3_version, '8.0', '<')) {
-            $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl), false);
-        } else {
-            $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl));
-        }
-
+        $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl));
         if (
             !GeneralUtility::isAllowedAbsPath($absoluteFileName)
             || !GeneralUtility::verifyFilenameAgainstDenyPattern($absoluteFileName)
-            || GeneralUtility::isFirstPartOfStr($absoluteFileName, (PATH_site . 'typo3conf'))
+            || GeneralUtility::isFirstPartOfStr($absoluteFileName, Environment::getLegacyConfigPath())
         ) {
             throw new \Exception('The requested file was not allowed to be accessed through Jump URL. The path or file is not allowed.', 1294585194);
         }
@@ -142,10 +133,10 @@ class JumpUrlHandler implements UrlHandlerInterface
         try {
             $resourceFactory = $this->getResourceFactory();
             $file = $resourceFactory->retrieveFileOrFolderObject($absoluteFileName);
-            $this->readFileAndExit($file, $mimeType);
         } catch (\Exception $e) {
             throw new \Exception('The requested file "' . $jumpUrl . '" for Jump URL was not found..', 1294585193);
         }
+        return $file->getStorage()->streamFile($file, true, null, $mimeType);
     }
 
     /**
@@ -154,22 +145,21 @@ class JumpUrlHandler implements UrlHandlerInterface
      * @param string $locationData
      * @return bool
      */
-    protected function isLocationDataValid($locationData)
+    protected function isLocationDataValid(string $locationData): bool
     {
         $isValidLocationData = false;
         list($pageUid, $table, $recordUid) = explode(':', $locationData);
         $pageRepository = $this->getTypoScriptFrontendController()->sys_page;
-        $timeTracker = $this->getTimeTracker();
         if (empty($table) || $pageRepository->checkRecord($table, $recordUid, true)) {
             // This check means that a record is checked only if the locationData has a value for a
             // record else than the page.
             if (!empty($pageRepository->getPage($pageUid))) {
                 $isValidLocationData = true;
             } else {
-                $timeTracker->setTSlogMessage('LocationData Error: The page pointed to by location data "' . $locationData . '" was not accessible.', 2);
+                $this->timeTracker->setTSlogMessage('LocationData Error: The page pointed to by location data "' . $locationData . '" was not accessible.', 2);
             }
         } else {
-            $timeTracker->setTSlogMessage('LocationData Error: Location data "' . $locationData . '" record pointed to was not accessible.', 2);
+            $this->timeTracker->setTSlogMessage('LocationData Error: Location data "' . $locationData . '" record pointed to was not accessible.', 2);
         }
         return $isValidLocationData;
     }
@@ -179,65 +169,39 @@ class JumpUrlHandler implements UrlHandlerInterface
      * But also checks against the common juHash parameter first
      *
      * @param string $jumpUrl the URL to check
+     * @param string $submittedHash the "juHash" GET parameter
      * @throws \Exception thrown if no redirect is allowed
      */
-    protected function validateIfJumpUrlRedirectIsAllowed($jumpUrl)
+    protected function validateIfJumpUrlRedirectIsAllowed(string $jumpUrl, string $submittedHash): void
     {
+        if ($this->isJumpUrlHashValid($jumpUrl, $submittedHash)) {
+            return;
+        }
+
         $allowRedirect = false;
-        if ($this->isJumpUrlHashValid($jumpUrl)) {
-            $allowRedirect = true;
-        } elseif (
-            isset($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['jumpurlRedirectHandler'])
-            && is_array($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['jumpurlRedirectHandler'])
-        ) {
-            foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['jumpurlRedirectHandler'] as $className) {
-                $hookObject = GeneralUtility::getUserObj($className);
-                if (method_exists($hookObject, 'jumpurlRedirectHandler')) {
-                    $allowRedirect = $hookObject->jumpurlRedirectHandler($jumpUrl, $GLOBALS['TSFE']);
-                }
-                if ($allowRedirect) {
-                    break;
-                }
+        foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['jumpurlRedirectHandler'] ?? [] as $className) {
+            $hookObject = GeneralUtility::makeInstance($className);
+            if (method_exists($hookObject, 'jumpurlRedirectHandler')) {
+                $allowRedirect = $hookObject->jumpurlRedirectHandler($jumpUrl, $this->getTypoScriptFrontendController());
+            }
+            if ($allowRedirect) {
+                return;
             }
         }
 
-        if (!$allowRedirect) {
-            throw new \Exception('The calculated Jump URL hash ("juHash") did not match the submitted "juHash" query parameter.', 1359987599);
-        }
+        throw new \Exception('The calculated Jump URL hash ("juHash") did not match the submitted "juHash" query parameter.', 1359987599);
     }
 
     /**
      * Validate the jumpUrl hash against the GET/POST parameter "juHash".
      *
      * @param string $jumpUrl The URL to check against.
+     * @param string $submittedHash the "juHash" GET parameter
      * @return bool
      */
-    protected function isJumpUrlHashValid($jumpUrl)
+    protected function isJumpUrlHashValid(string $jumpUrl, string $submittedHash): bool
     {
-        return GeneralUtility::_GP('juHash') === JumpUrlUtility::calculateHash($jumpUrl);
-    }
-
-    /**
-     * Calls the PHP readfile function and exits.
-     *
-     * @param FileInterface $file The file that should be read.
-     * @param string $mimeType Optional mime type override. If empty the automatically detected mime type will be used.
-     */
-    protected function readFileAndExit($file, $mimeType)
-    {
-        $file->getStorage()->dumpFileContents($file, true, null, $mimeType);
-        exit;
-    }
-
-    /**
-     * Simply calls the redirect method in the HttpUtility.
-     *
-     * @param string $jumpUrl
-     * @param int $statusCode
-     */
-    protected function redirect($jumpUrl, $statusCode)
-    {
-        HttpUtility::redirect($jumpUrl, $statusCode);
+        return $submittedHash === JumpUrlUtility::calculateHash($jumpUrl);
     }
 
     /**
@@ -249,7 +213,7 @@ class JumpUrlHandler implements UrlHandlerInterface
      *
      * @return string the modified URL
      */
-    protected function addParametersToTransferSession($jumpUrl, $pageTSconfig)
+    protected function addParametersToTransferSession(string $jumpUrl, array $pageTSconfig): string
     {
         // allow to send the current fe_user with the jump URL
         if (!empty($pageTSconfig['jumpUrl_transferSession'])) {
@@ -270,27 +234,22 @@ class JumpUrlHandler implements UrlHandlerInterface
     }
 
     /**
-     * Returns one of the HTTP_STATUS_* constants of the HttpUtility that matches
+     * Returns a valid Redirect HTTP Response status code that matches
      * the configured HTTP status code in TSFE.jumpURL_HTTPStatusCode Page TSconfig.
      *
      * @param array $pageTSconfig
-     * @return string
+     * @return int
      * @throws \InvalidArgumentException If the configured status code is not valid.
      */
-    protected function getRedirectStatusCode($pageTSconfig)
+    protected function getRedirectStatusCode(array $pageTSconfig): int
     {
-        $statusCode = HttpUtility::HTTP_STATUS_303;
-
+        $statusCode = 303;
         if (!empty($pageTSconfig['jumpURL_HTTPStatusCode'])) {
             switch ((int)$pageTSconfig['jumpURL_HTTPStatusCode']) {
                 case 301:
-                    $statusCode = HttpUtility::HTTP_STATUS_301;
-                    break;
                 case 302:
-                    $statusCode = HttpUtility::HTTP_STATUS_302;
-                    break;
                 case 307:
-                    $statusCode = HttpUtility::HTTP_STATUS_307;
+                    $statusCode = (int)$pageTSconfig['jumpURL_HTTPStatusCode'];
                     break;
                 default:
                     throw new \InvalidArgumentException('The configured jumpURL_HTTPStatusCode option is invalid. Allowed codes are 301, 302 and 307.', 1381768833);
@@ -300,29 +259,13 @@ class JumpUrlHandler implements UrlHandlerInterface
         return $statusCode;
     }
 
-    /**
-     * @return \TYPO3\CMS\Core\TimeTracker\TimeTracker
-     */
-    protected function getTimeTracker()
+    protected function getResourceFactory(): ResourceFactory
     {
-        return $GLOBALS['TT'];
+        return GeneralUtility::makeInstance(ResourceFactory::class);
     }
 
-    /**
-     * Returns an instance of the ResourceFactory.
-     *
-     * @return ResourceFactory
-     */
-    protected function getResourceFactory()
+    protected function getTypoScriptFrontendController(): TypoScriptFrontendController
     {
-        return ResourceFactory::getInstance();
-    }
-
-    /**
-     * @return \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController
-     */
-    protected function getTypoScriptFrontendController()
-    {
-        return $GLOBALS['TSFE'];
+        return $this->typoScriptFrontendController ?? $GLOBALS['TSFE'];
     }
 }
