@@ -14,8 +14,8 @@ namespace FoT3\Jumpurl\Tests\Unit\Middleware;
  * The TYPO3 project - inspiring people to share!
  */
 
-use FoT3\Jumpurl\Middleware\JumpUrlHandler;
 use FoT3\Jumpurl\JumpUrlUtility;
+use FoT3\Jumpurl\Middleware\JumpUrlHandler;
 use Nimut\TestingFramework\TestCase\UnitTestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -234,7 +234,6 @@ class JumpUrlHandlerTest extends UnitTestCase
         $this->jumpUrlHandler->expects($this->once())
             ->method('getResourceFactory')
             ->will($this->returnValue($resourceFactoryMock));
-
 
         $request = $this->prepareJumpUrlSecureTest($jumpUrl, $hash);
         $response = $this->jumpUrlHandler->process($request, $this->defaultRequestHandler);
