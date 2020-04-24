@@ -17,6 +17,7 @@ namespace FoT3\Jumpurl;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
+use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Http\UrlProcessorInterface;
 
 /**
@@ -30,13 +31,24 @@ class JumpUrlProcessor implements UrlProcessorInterface
     protected $contentObjectRenderer;
 
     /**
+     * @var TypoScriptFrontendController
+     */
+    protected $frontendController;
+
+    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, ContentObjectRenderer $contentObjectRenderer = null)
+    {
+        $this->frontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
+        $this->contentObjectRenderer = $contentObjectRenderer;
+    }
+
+    /**
      * Generates the JumpURL for the given parameters.
      *
      * @see \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::processUrlModifiers()
      * @param string $context The context in which the URL is generated (e.g. "typolink").
      * @param string $url The URL that should be processed.
      * @param array $configuration The link configuration.
-     * @param \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $contentObjectRenderer The calling content object renderer.
+     * @param ContentObjectRenderer $contentObjectRenderer The calling content object renderer.
      * @param bool $keepProcessing If this is set to FALSE no further hooks will be processed after the current one.
      * @return string
      */
@@ -191,18 +203,12 @@ class JumpUrlProcessor implements UrlProcessorInterface
         return $linkParameter;
     }
 
-    /**
-     * @return \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController
-     */
-    protected function getTypoScriptFrontendController()
+    protected function getTypoScriptFrontendController(): TypoScriptFrontendController
     {
-        return $GLOBALS['TSFE'];
+        return $this->frontendController ?? $GLOBALS['TSFE'];
     }
 
-    /**
-     * @return ContentObjectRenderer
-     */
-    protected function getContentObjectRenderer()
+    protected function getContentObjectRenderer(): ContentObjectRenderer
     {
         return $this->contentObjectRenderer ?: $this->getTypoScriptFrontendController()->cObj;
     }

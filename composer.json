@@ -5,16 +5,15 @@
 	"homepage": "https://typo3.org",
 	"license": "GPL-2.0-or-later",
 	"require": {
-		"typo3/cms-core": "^7.6 || ^8.0 || ^9.0",
-		"typo3/cms-frontend": "^7.6 || ^8.0 || ^9.0"
+		"typo3/cms-core": "^9.0 || ^10.0",
+		"typo3/cms-frontend": "^9.0 || ^10.0"
 	},
 	"require-dev": {
-		"nimut/testing-framework": "^2.0",
-		"phpunit/phpunit": "^4.8 || ^5.7",
+		"nimut/testing-framework": "^5.0",
+		"phpunit/phpunit": "^7.0",
 		"friendsofphp/php-cs-fixer": "^2.0"
 	},
 	"replace": {
-		"jumpurl": "self.version",
 		"typo3-ter/jumpurl": "self.version"
 	},
 	"autoload": {
