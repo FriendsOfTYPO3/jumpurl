@@ -19,6 +19,15 @@ use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Http\UrlProcessorInterface;
+use TYPO3\CMS\Core\Site\Entity\NullSite;
+use TYPO3\CMS\Core\Site\Entity\Site;
+use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
+use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\TypoScript\TemplateService;
+use TYPO3\CMS\Core\Domain\Repository\PageRepository;
+use TYPO3\CMS\Core\Context\Context;
+use TYPO3\CMS\Core\Http\ServerRequestFactory;
+use TYPO3\CMS\Core\Routing\PageArguments;
 
 /**
  * This class implements the hooks for creating jump URLs when links (typolink, mailtoLink) are built
@@ -205,7 +214,44 @@ class JumpUrlProcessor implements UrlProcessorInterface
 
     protected function getTypoScriptFrontendController(): TypoScriptFrontendController
     {
-        return $this->frontendController ?? $GLOBALS['TSFE'];
+        if ($this->frontendController instanceof TypoScriptFrontendController) {
+            return $this->frontendController;
+        }
+
+        // This usually happens when typolink is created by the TYPO3 Backend, where no TSFE object
+        // is there. This functionality is currently completely internal, as these links cannot be
+        // created properly from the Backend.
+        // However, this is added to avoid any exceptions when trying to create a link.
+        // Detecting the "first" site usually comes from the fact that TSFE needs to be instantiated
+        // during tests
+        $request = $GLOBALS['TYPO3_REQUEST'] ?? ServerRequestFactory::fromGlobals();
+        $site = $request->getAttribute('site');
+        if (!$site instanceof Site) {
+            $sites = GeneralUtility::makeInstance(SiteFinder::class)->getAllSites();
+            $site = reset($sites);
+            if (!$site instanceof Site) {
+                $site = new NullSite();
+            }
+        }
+        $language = $request->getAttribute('language');
+        if (!$language instanceof SiteLanguage) {
+            $language = $site->getDefaultLanguage();
+        }
+
+        $id = $request->getQueryParams()['id'] ?? $request->getParsedBody()['id'] ?? $site->getRootPageId();
+        $type = $request->getQueryParams()['type'] ?? $request->getParsedBody()['type'] ?? '0';
+
+        $this->frontendController = GeneralUtility::makeInstance(
+            TypoScriptFrontendController::class,
+            GeneralUtility::makeInstance(Context::class),
+            $site,
+            $language,
+            $request->getAttribute('routing', new PageArguments((int)$id, (string)$type, []))
+        );
+        $this->frontendController->sys_page = GeneralUtility::makeInstance(PageRepository::class);
+        $this->frontendController->tmpl = GeneralUtility::makeInstance(TemplateService::class);
+
+        return $this->frontendController;
     }
 
     protected function getContentObjectRenderer(): ContentObjectRenderer
