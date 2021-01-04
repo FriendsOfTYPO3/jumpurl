@@ -203,9 +203,9 @@ class JumpUrlProcessor implements UrlProcessorInterface
         return $linkParameter;
     }
 
-    protected function getTypoScriptFrontendController(): TypoScriptFrontendController
+    protected function getTypoScriptFrontendController(): ?TypoScriptFrontendController
     {
-        return $this->frontendController ?? $GLOBALS['TSFE'];
+        return $this->frontendController ?? $GLOBALS['TSFE'] ?? null;
     }
 
     protected function getContentObjectRenderer(): ContentObjectRenderer
