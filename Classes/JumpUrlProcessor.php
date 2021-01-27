@@ -19,6 +19,7 @@ use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Http\UrlProcessorInterface;
+use TYPO3\CMS\Frontend\Typolink\PageLinkBuilder;
 
 /**
  * This class implements the hooks for creating jump URLs when links (typolink, mailtoLink) are built
@@ -91,14 +92,14 @@ class JumpUrlProcessor implements UrlProcessorInterface
      */
     protected function isEnabled($context, array $configuration = [])
     {
-        if (!empty($configuration['jumpurl.']['forceDisable'])) {
+        if (!empty($configuration['jumpurl.']['forceDisable'] ?? false)) {
             return false;
         }
 
-        $enabled = !empty($configuration['jumpurl']);
+        $enabled = !empty($configuration['jumpurl'] ?? false);
 
         // if jumpurl is explicitly set to 0 we override the global configuration
-        if (!$enabled && $this->getTypoScriptFrontendController()->config['config']['jumpurl_enable']) {
+        if (!$enabled && ($this->getTypoScriptFrontendController()->config['config']['jumpurl_enable'] ?? false)) {
             $enabled = !isset($configuration['jumpurl']) || $configuration['jumpurl'];
         }
 
@@ -106,7 +107,7 @@ class JumpUrlProcessor implements UrlProcessorInterface
         // but globally disabled for mailto links we disable it
         if (
             empty($configuration['jumpurl']) && $context === UrlProcessorInterface::CONTEXT_MAIL
-            && $this->getTypoScriptFrontendController()->config['config']['jumpurl_mailto_disable']
+            && ($this->getTypoScriptFrontendController()->config['config']['jumpurl_mailto_disable'] ?? false)
         ) {
             $enabled = false;
         }
@@ -171,7 +172,7 @@ class JumpUrlProcessor implements UrlProcessorInterface
         if (!empty($pathInfo['extension'])) {
             $mimeTypes = GeneralUtility::trimExplode(',', $configuration['mimeTypes'], true);
             foreach ($mimeTypes as $mimeType) {
-                list($fileExtension, $mimeType) = GeneralUtility::trimExplode('=', $mimeType, false, 2);
+                [$fileExtension, $mimeType] = GeneralUtility::trimExplode('=', $mimeType, false, 2);
                 if (strtolower($pathInfo['extension']) === strtolower($fileExtension)) {
                     $parameters['mimeType'] = $mimeType;
                     break;
@@ -205,7 +206,13 @@ class JumpUrlProcessor implements UrlProcessorInterface
 
     protected function getTypoScriptFrontendController(): TypoScriptFrontendController
     {
-        return $this->frontendController ?? $GLOBALS['TSFE'];
+        $tsfe = $this->frontendController ?? $GLOBALS['TSFE'] ?? null;
+        if ($tsfe instanceof TypoScriptFrontendController) {
+            return $tsfe;
+        }
+        // workaround for getting a TSFE object in Backend
+        $linkBuilder = GeneralUtility::makeInstance(PageLinkBuilder::class, new ContentObjectRenderer());
+        return $linkBuilder->getTypoScriptFrontendController();
     }
 
     protected function getContentObjectRenderer(): ContentObjectRenderer
