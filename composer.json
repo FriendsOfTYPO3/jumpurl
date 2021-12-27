@@ -5,8 +5,8 @@
 	"homepage": "https://typo3.org",
 	"license": "GPL-2.0-or-later",
 	"require": {
-		"typo3/cms-core": "^9.0 || ^10.0",
-		"typo3/cms-frontend": "^9.0 || ^10.0"
+		"typo3/cms-core": "^9.0 || ^10.0 || ^11.0",
+		"typo3/cms-frontend": "^9.0 || ^10.0 || ^11.0"
 	},
 	"require-dev": {
 		"nimut/testing-framework": "^5.0",
