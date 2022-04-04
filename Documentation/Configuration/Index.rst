@@ -64,8 +64,8 @@ jumpurl\_mailto\_disable
 typolink settings
 ^^^^^^^^^^^^^^^^^
 
-JumpURL options can be provided in the :ref:`typolink <t3tsref:typolink>` and the :ref:`filelink <t3tsref:filelink>`
-configuration.
+JumpURL options can be provided in the :ref:`typolink <t3tsref:typolink>` and
+the :ref:`filelink <t3tsref-v9:filelink>` configuration.
 
 The ``typolink`` options can be provided directly in the ``typolink`` namespace, e.g.:
 
