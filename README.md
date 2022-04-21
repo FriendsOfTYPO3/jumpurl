@@ -1,34 +1,21 @@
-# TYPO3 Extension "jumpurl"
+[![Latest Stable Version](https://poser.pugx.org/friendsoftypo3/jumpurl/v/stable.svg)](https://extensions.typo3.org/extension/jumpurl/)
+[![TYPO3 11](https://img.shields.io/badge/TYPO3-11-orange.svg?style=flat-square)](https://get.typo3.org/version/11)
+[![TYPO3 10](https://img.shields.io/badge/TYPO3-10-orange.svg?style=flat-square)](https://get.typo3.org/version/10)
+[![TYPO3 9](https://img.shields.io/badge/TYPO3-9-orange.svg?style=flat-square)](https://get.typo3.org/version/9)
+[![Total Downloads](https://poser.pugx.org/friendsoftypo3/jumpurl/d/total.svg)](https://packagist.org/packages/friendsoftypo3/jumpurl)
+[![Monthly Downloads](https://poser.pugx.org/friendsoftypo3/jumpurl/d/monthly)](https://packagist.org/packages/friendsoftypo3/jumpurl)
 
-Adds functionality to configure and handle short links in the TYPO3 Frontend.
+# TYPO3 extension `jumpurl`
 
-The feature was part of TYPO3, until TYPO3 CMS 7 LTS, and moved into its own
-extension, receiving its own public repository.
+This extension adds functionality to configure and handle short links in the
+frontend. It also provides a secure, hash-based way to access files for
+download.
 
-## Installation
-The latest version can be installed via TER (https://typo3.org) or via composer
-by adding `composer require friendsoftypo3/jumpurl` in a TYPO3 CMS 7+ installation.
+The feature was part of TYPO3 until TYPO3 CMS 7 LTS and was then moved to its
+own extension, which got its own public repository.
 
-EXT:jumpurl v7 is compatible with TYPO3 v7 / v8 / v9, whereas
-EXT:jumpurl v8 is compatible with TYPO3 v9+ as it is based on the PSR-15 middleware approach.
-
-## Current state
-The latest version here reflects a feature-complete state.
-
-## Contribution
-Feel free to submit any pull request, or add documentation, tests, as you please.
-We will publish a new version every once in a while, depending on the amount of changes
-and pull requests submitted.
-
-### License
-The extension is published under GPL v2+, all included third-party libraries are
-published under their respective licenses.
-
-### Authors
-Initially developed by Kasper Skaarhoj, it was polished by over 100 contributors in this
-area while being part of the TYPO3 Core, and then extracted into its own extension by
-Alexander Stehlik and Benni Mack.
-
-This package is now maintained by a loose group of TYPO3 enthusiasts inside
-the TYPO3 Community. Feel free to contact Benni Mack (benni@typo3.org) for any questions
-regarding `jumpurl`.
+|                  | URL                                                         |
+|------------------|-------------------------------------------------------------|
+| **Repository:**  | https://github.com/FriendsOfTYPO3/jumpurl                   |
+| **Read online:** | https://docs.typo3.org/p/friendsoftypo3/jumpurl/main/en-us/ |
+| **TER:**         | https://extensions.typo3.org/extension/jumpurl              |

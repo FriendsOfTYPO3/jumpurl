@@ -1,60 +1,57 @@
-﻿.. ==================================================
-.. FOR YOUR INFORMATION
-.. --------------------------------------------------
-.. -*- coding: utf-8 -*- with BOM.
-
-.. include:: Includes.txt
-
-
-.. _start:
+﻿.. include:: /Includes.rst.txt
 
 ========
-JumpURL
+Jump URL
 ========
 
 :Extension key:
-      jumpurl
+   jumpurl
+
+:Package name:
+   friendsoftypo3/jumpurl
 
 :Version:
-      |release|
+   |release|
 
 :Language:
-      en
-
-:Description:
-      Allows to modify links to create Jump URLs created in the frontend of the TYPO3 Core.
-
-:Keywords:
-      jumpurl, sysext
-
-:Copyright:
-      2015
+   en
 
 :Author:
-      TYPO3 CMS Core Development Team
+   TYPO3 Core Team & Contributors
 
 :License:
-      Open Content License available from `www.opencontent.org/opl.shtml
-      <http://www.opencontent.org/opl.shtml>`_
+   This document is published under the
+   `Open Content License <https://www.openhub.net/licenses/opl>`__.
 
 :Rendered:
-      |today|
+   |today|
 
-The content of this document is related to TYPO3,
+----
 
-a GNU/GPL CMS/Framework available from `www.typo3.org
-<http://www.typo3.org/>`_
+This extension adds functionality to configure and handle short links in the
+frontend. It also provides a secure, hash-based way to access files for
+download.
 
+The feature was part of TYPO3 until TYPO3 CMS 7 LTS and was then moved to its
+own extension, which got its own public repository.
 
+----
 
-
-**Table of Contents**
+**Table of Contents:**
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 2
    :titlesonly:
-   :glob:
 
    Introduction/Index
+   Installation/Index
    Configuration/Index
-   Targets
+   Contribution/Index
+
+.. Meta Menu
+
+.. toctree::
+   :hidden:
+
+   Sitemap
+   genindex

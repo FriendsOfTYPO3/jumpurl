@@ -2,7 +2,12 @@
 	"name": "friendsoftypo3/jumpurl",
 	"type": "typo3-cms-extension",
 	"description": "TYPO3 Jump URL handling",
-	"homepage": "https://typo3.org",
+	"homepage": "https://extensions.typo3.org/extension/jumpurl",
+	"support": {
+		"issues": "https://github.com/FriendsOfTYPO3/jumpurl/issues",
+		"source": "https://github.com/FriendsOfTYPO3/jumpurl",
+		"docs": "https://docs.typo3.org/p/friendsoftypo3/jumpurl/main/en-us/"
+	},
 	"license": "GPL-2.0-or-later",
 	"require": {
 		"typo3/cms-core": "^9.0 || ^10.0 || ^11.0",
