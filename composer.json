@@ -41,6 +41,9 @@
 			"cms-package-dir": "{$vendor-dir}/typo3/cms",
 			"extension-key": "jumpurl",
 			"web-dir": ".Build/Web"
+		},
+		"branch-alias": {
+			"dev-master": "8.0.4-dev"
 		}
 	}
 }

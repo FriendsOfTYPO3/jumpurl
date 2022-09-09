@@ -22,6 +22,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
+use TYPO3\CMS\Core\Resource\Security\FileNameValidator;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
@@ -57,12 +58,12 @@ class JumpUrlHandler implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $jumpUrl = (string)$request->getQueryParams()['jumpurl'] ?? '';
+        $jumpUrl = (string)($request->getQueryParams()['jumpurl'] ?? '');
         if (!empty($jumpUrl)) {
-            $juHash = (string)$request->getQueryParams()['juHash'] ?? '';
+            $juHash = (string)($request->getQueryParams()['juHash'] ?? '');
             if (!empty($request->getQueryParams()['juSecure'])) {
-                $locationData = (string)$request->getQueryParams()['locationData'] ?? '';
-                $mimeType = (string)$request->getQueryParams()['mimeType'] ?? '';
+                $locationData = (string)($request->getQueryParams()['locationData'] ?? '');
+                $mimeType = (string)($request->getQueryParams()['mimeType'] ?? '');
                 return $this->forwardJumpUrlSecureFileData($jumpUrl, $locationData, $mimeType, $juHash);
             }
             // Regular jump URL
@@ -123,8 +124,8 @@ class JumpUrlHandler implements MiddlewareInterface
         $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl));
         if (
             !GeneralUtility::isAllowedAbsPath($absoluteFileName)
-            || !GeneralUtility::verifyFilenameAgainstDenyPattern($absoluteFileName)
-            || GeneralUtility::isFirstPartOfStr($absoluteFileName, Environment::getLegacyConfigPath())
+            || !GeneralUtility::makeInstance(FileNameValidator::class)->isValid($absoluteFileName)
+            || str_starts_with($absoluteFileName, Environment::getLegacyConfigPath())
         ) {
             throw new \Exception('The requested file was not allowed to be accessed through Jump URL. The path or file is not allowed.', 1294585194);
         }
