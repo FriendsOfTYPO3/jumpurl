@@ -57,12 +57,12 @@ class JumpUrlHandler implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $jumpUrl = (string)$request->getQueryParams()['jumpurl'] ?? '';
+        $jumpUrl = (string)($request->getQueryParams()['jumpurl'] ?? '');
         if (!empty($jumpUrl)) {
-            $juHash = (string)$request->getQueryParams()['juHash'] ?? '';
+            $juHash = (string)($request->getQueryParams()['juHash'] ?? '');
             if (!empty($request->getQueryParams()['juSecure'])) {
-                $locationData = (string)$request->getQueryParams()['locationData'] ?? '';
-                $mimeType = (string)$request->getQueryParams()['mimeType'] ?? '';
+                $locationData = (string)($request->getQueryParams()['locationData'] ?? '');
+                $mimeType = (string)($request->getQueryParams()['mimeType'] ?? '');
                 return $this->forwardJumpUrlSecureFileData($jumpUrl, $locationData, $mimeType, $juHash);
             }
             // Regular jump URL
