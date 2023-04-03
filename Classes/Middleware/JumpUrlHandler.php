@@ -21,7 +21,9 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Http\RedirectResponse;
+use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
+use TYPO3\CMS\Core\Resource\Security\FileNameValidator;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
@@ -121,11 +123,19 @@ class JumpUrlHandler implements MiddlewareInterface
         // Deny access to files that match TYPO3_CONF_VARS[SYS][fileDenyPattern] and whose parent directory
         // is typo3conf/ (there could be a backup file in typo3conf/ which does not match against the fileDenyPattern)
         $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl));
-        if (
-            !GeneralUtility::isAllowedAbsPath($absoluteFileName)
-            || !GeneralUtility::verifyFilenameAgainstDenyPattern($absoluteFileName)
-            || GeneralUtility::isFirstPartOfStr($absoluteFileName, Environment::getLegacyConfigPath())
-        ) {
+        
+        // Check if requested file accessable
+        $fileAccessAllowed = false;
+        if ((new Typo3Version())->getMajorVersion() < 11) {
+            $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName) 
+                && GeneralUtility::verifyFilenameAgainstDenyPattern($absoluteFileName)
+                && !GeneralUtility::isFirstPartOfStr($absoluteFileName, Environment::getLegacyConfigPath());
+        } else {
+            $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName)
+                && GeneralUtility::makeInstance(FileNameValidator::class)->isValid($absoluteFileName)
+                && !str_starts_with($absoluteFileName, Environment::getLegacyConfigPath());
+	    }
+        if (!$fileAccessAllowed) {
             throw new \Exception('The requested file was not allowed to be accessed through Jump URL. The path or file is not allowed.', 1294585194);
         }
 
