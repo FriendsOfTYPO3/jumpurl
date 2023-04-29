@@ -84,7 +84,7 @@ class JumpUrlHandler implements MiddlewareInterface
     protected function redirectToJumpUrl(string $jumpUrl): ResponseInterface
     {
         $pageTSconfig = $this->getTypoScriptFrontendController()->getPagesTSconfig();
-        $pageTSconfig = is_array($pageTSconfig['TSFE.']) ? $pageTSconfig['TSFE.'] : [];
+        $pageTSconfig = is_array($pageTSconfig['TSFE.'] ?? false) ? $pageTSconfig['TSFE.'] : [];
 
         // Allow sections in links
         $jumpUrl = str_replace('%23', '#', $jumpUrl);
