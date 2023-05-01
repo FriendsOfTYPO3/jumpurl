@@ -101,8 +101,7 @@ class LinkModifier
      * Returns TRUE if jumpurl was enabled in the global configuration
      * or in the given configuration
      *
-     * @param string $context separate check for the MAIL context needed
-     * @param array $configuration Optional jump URL configuration
+     * @param AfterLinkIsGeneratedEvent $event
      * @return bool TRUE if enabled, FALSE if disabled
      */
     protected function isEnabled(AfterLinkIsGeneratedEvent $event)
