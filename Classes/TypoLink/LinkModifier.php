@@ -75,7 +75,7 @@ class LinkModifier
             if ($urlPrefix !== '' && !StringUtility::beginsWith($url, $urlPrefix)) {
                 $url = $urlPrefix . $url;
             }
-            $event->setLinkResult($url);
+            $event->setLinkResult($event->getLinkResult()->withAttribute('href', $url));
         }
     }
     
