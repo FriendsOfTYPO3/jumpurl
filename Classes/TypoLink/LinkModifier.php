@@ -65,8 +65,7 @@ class LinkModifier
             }
             
             // Make sure the slashes in the file URL are not encoded.
-            // LinkService::TYPE_FILE
-            if ($context === UrlProcessorInterface::CONTEXT_FILE) {
+            if ($context === LinkService::TYPE_FILE) {
                 $url = str_replace('%2F', '/', rawurlencode(rawurldecode($url)));
             }
 
@@ -103,9 +102,8 @@ class LinkModifier
 
         // If we have a mailto link and jumpurl is not explicitly enabled
         // but globally disabled for mailto links we disable it
-        // LinkService::TYPE_EMAIL
         if (
-            empty($configuration['jumpurl']) && $context === UrlProcessorInterface::CONTEXT_MAIL
+            empty($configuration['jumpurl']) && $context === LinkService::TYPE_EMAIL
             && ($this->getTypoScriptFrontendController()->config['config']['jumpurl_mailto_disable'] ?? false)
         ) {
             $enabled = false;
