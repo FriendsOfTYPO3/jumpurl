@@ -1,0 +1,5 @@
+services:
+  FoT3\Jumpurl\TypoLink\LinkModifier:
+    tags:
+      - name: event.listener
+        identifier: 'jumpUrlLinkModifierListener'
