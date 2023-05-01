@@ -1,4 +1,5 @@
 <?php
+
 namespace FoT3\Jumpurl\TypoLink;
 
 /*
@@ -50,10 +51,14 @@ class LinkModifier
             if ($urlPrefix !== '' && str_starts_with($url, $urlPrefix)) {
                 $url = substr($url, strlen($urlPrefix));
             }
-            
+
             // Make sure the slashes in the file URL are not encoded.
             if ($context === LinkService::TYPE_FILE) {
                 $url = str_replace('%2F', '/', rawurlencode(rawurldecode($url)));
+            }
+
+            if ($context === LinkService::TYPE_PAGE && $url === '') {
+                $url = '/';
             }
 
             $urlParameters = ['jumpurl' => $url];
@@ -79,13 +84,18 @@ class LinkModifier
             $jumpurl = $this->getContentObjectRenderer()->typoLink_URL($typoLinkConfiguration);
 
             // Now add the prefix again if it was not added by a typolink call already.
-            if ($urlPrefix !== '' && !str_starts_with($jumpurl, $urlPrefix)) {
-                $jumpurl = $urlPrefix . $jumpurl;
+            if ($urlPrefix !== '') {
+                if (!str_starts_with($jumpurl, $urlPrefix)) {
+                    $jumpurl = $urlPrefix . $jumpurl;
+                }
+                if (!str_starts_with($url, $urlPrefix)) {
+                    $url = $urlPrefix . $url;
+                }
             }
             $event->setLinkResult($event->getLinkResult()->withAttributes(['href' => $jumpurl, 'jumpurl' => $url]));
         }
     }
-    
+
     /**
      * Returns TRUE if jumpurl was enabled in the global configuration
      * or in the given configuration
@@ -155,7 +165,8 @@ class LinkModifier
                 }
             }
         }
-        $parameters['juHash'] = JumpUrlUtility::calculateHashSecure($jumpUrl, $parameters['locationData'], $parameters['mimeType']);
+        $parameters['juHash'] = JumpUrlUtility::calculateHashSecure($jumpUrl, $parameters['locationData'],
+            $parameters['mimeType']);
         return $parameters;
     }
 
