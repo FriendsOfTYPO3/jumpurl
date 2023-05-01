@@ -47,7 +47,9 @@ class LinkModifier
         $linkInstructions = $event->getLinkInstructions();
 
         // todo get context and configuration
-        if ($this->isEnabled()) {
+        $context = 'common';
+        
+        if ($this->isEnabled($context, $linkInstructions)) {
             $this->contentObjectRenderer = $event->getContentObjectRenderer();
 
             $url = $event->getLinkResult();
