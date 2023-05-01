@@ -44,12 +44,33 @@ class LinkModifier
 
     public function __invoke(AfterLinkIsGeneratedEvent $event): void
     {
-        $this->contentObjectRenderer = $event->getContentObjectRenderer();
         $linkInstructions = $event->getLinkInstructions();
+
+        // todo get context and configuration
         if ($this->isEnabled()) {
+            $this->contentObjectRenderer = $event->getContentObjectRenderer();
+
+            $url = $event->getLinkResult();
+            //$url = $event->getLinkResult()->withAttribute('data-enable-lightbox', true);
             // todo modify link
-            // $linkResult = $event->getLinkResult()->withAttribute('data-enable-lightbox', true);
-            // $event->setLinkResult($linkResult);
+            // Strip the absRefPrefix from the URLs.
+            $urlPrefix = (string)$this->getTypoScriptFrontendController()->absRefPrefix;
+            if ($urlPrefix !== '' && StringUtility::beginsWith($url, $urlPrefix)) {
+                $url = substr($url, strlen($urlPrefix));
+            }
+            
+            // Make sure the slashes in the file URL are not encoded.
+            if ($context === UrlProcessorInterface::CONTEXT_FILE) {
+                $url = str_replace('%2F', '/', rawurlencode(rawurldecode($url)));
+            }
+
+            $url = $this->build($url, $configuration['jumpurl.'] ?? []);
+
+            // Now add the prefix again if it was not added by a typolink call already.
+            if ($urlPrefix !== '' && !StringUtility::beginsWith($url, $urlPrefix)) {
+                $url = $urlPrefix . $url;
+            }
+            $event->setLinkResult($url);
         }
     }
     
