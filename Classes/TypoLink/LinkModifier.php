@@ -48,11 +48,13 @@ class LinkModifier
 
         // todo get context and configuration
         $context = 'common';
+        $context = $event->getLinkResult()->getType();
+        $configuration = $event->getLinkResult()->getLinkConfiguration();
         
-        if ($this->isEnabled($context, $linkInstructions)) {
+        if ($this->isEnabled($context, $configuration)) {
             $this->contentObjectRenderer = $event->getContentObjectRenderer();
 
-            $url = $event->getLinkResult();
+            $url = $event->getLinkResult()->getUrl();
             //$url = $event->getLinkResult()->withAttribute('data-enable-lightbox', true);
             // todo modify link
             // Strip the absRefPrefix from the URLs.
@@ -62,6 +64,7 @@ class LinkModifier
             }
             
             // Make sure the slashes in the file URL are not encoded.
+            // LinkService::TYPE_FILE
             if ($context === UrlProcessorInterface::CONTEXT_FILE) {
                 $url = str_replace('%2F', '/', rawurlencode(rawurldecode($url)));
             }
@@ -99,6 +102,7 @@ class LinkModifier
 
         // If we have a mailto link and jumpurl is not explicitly enabled
         // but globally disabled for mailto links we disable it
+        // LinkService::TYPE_EMAIL
         if (
             empty($configuration['jumpurl']) && $context === UrlProcessorInterface::CONTEXT_MAIL
             && ($this->getTypoScriptFrontendController()->config['config']['jumpurl_mailto_disable'] ?? false)
