@@ -37,18 +37,17 @@ class LinkModifier
      */
     protected $frontendController;
 
-    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, ContentObjectRenderer $contentObjectRenderer = null)
-    {
-        $this->frontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
-        $this->contentObjectRenderer = $contentObjectRenderer;
-    }
+//    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, ContentObjectRenderer $contentObjectRenderer = null)
+//    {
+//        $this->frontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
+//        $this->contentObjectRenderer = $contentObjectRenderer;
+//    }
 
     public function __invoke(AfterLinkIsGeneratedEvent $event): void
     {
         $linkInstructions = $event->getLinkInstructions();
 
         // todo get context and configuration
-        $context = 'common';
         $context = $event->getLinkResult()->getType();
         $configuration = $event->getLinkResult()->getLinkConfiguration();
         
@@ -60,7 +59,7 @@ class LinkModifier
             // todo modify link
             // Strip the absRefPrefix from the URLs.
             $urlPrefix = (string)$this->getTypoScriptFrontendController()->absRefPrefix;
-            if ($urlPrefix !== '' && StringUtility::beginsWith($url, $urlPrefix)) {
+            if ($urlPrefix !== '' && str_starts_with($url, $urlPrefix)) {
                 $url = substr($url, strlen($urlPrefix));
             }
             
@@ -72,7 +71,7 @@ class LinkModifier
             $url = $this->build($url, $configuration['jumpurl.'] ?? []);
 
             // Now add the prefix again if it was not added by a typolink call already.
-            if ($urlPrefix !== '' && !StringUtility::beginsWith($url, $urlPrefix)) {
+            if ($urlPrefix !== '' && !str_starts_with($url, $urlPrefix)) {
                 $url = $urlPrefix . $url;
             }
             $event->setLinkResult($event->getLinkResult()->withAttribute('href', $url));
