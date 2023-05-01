@@ -15,6 +15,7 @@ namespace FoT3\Jumpurl\TypoLink;
  */
 
 use FoT3\Jumpurl\JumpUrlUtility;
+use TYPO3\CMS\Core\LinkHandling\LinkService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
