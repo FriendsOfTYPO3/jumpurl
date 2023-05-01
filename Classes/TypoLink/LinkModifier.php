@@ -45,6 +45,7 @@ class LinkModifier
             $context = $event->getLinkResult()->getType();
             $configuration = $event->getLinkResult()->getLinkConfiguration();
             $this->contentObjectRenderer = $event->getContentObjectRenderer();
+            $this->frontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
 
             // Strip the absRefPrefix from the URLs.
             $urlPrefix = (string)$this->getTypoScriptFrontendController()->absRefPrefix;
@@ -106,13 +107,11 @@ class LinkModifier
      */
     protected function isEnabled(AfterLinkIsGeneratedEvent $event)
     {
-        $url = $event->getLinkResult()->getUrl();
-        $context = $event->getLinkResult()->getType();
-        $configuration = $event->getLinkResult()->getLinkConfiguration();
-
-        if (str_contains($url, 'juHash=')) {
+        if (str_contains($event->getLinkResult()->getUrl(), 'juHash=')) {
             return false;
         }
+
+        $configuration = $event->getLinkResult()->getLinkConfiguration();
 
         $enabled = !empty($configuration['jumpurl'] ?? false);
 
@@ -124,7 +123,7 @@ class LinkModifier
         // If we have a mailto link and jumpurl is not explicitly enabled
         // but globally disabled for mailto links we disable it
         if (
-            empty($configuration['jumpurl']) && $context === LinkService::TYPE_EMAIL
+            empty($configuration['jumpurl']) && $event->getLinkResult()->getType() === LinkService::TYPE_EMAIL
             && ($this->getTypoScriptFrontendController()->config['config']['jumpurl_mailto_disable'] ?? false)
         ) {
             $enabled = false;
