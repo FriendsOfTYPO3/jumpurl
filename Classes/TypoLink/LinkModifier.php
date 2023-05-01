@@ -45,8 +45,6 @@ class LinkModifier
             $configuration = $event->getLinkResult()->getLinkConfiguration();
             $this->contentObjectRenderer = $event->getContentObjectRenderer();
 
-            //$url = $event->getLinkResult()->withAttribute('data-enable-lightbox', true);
-            // todo modify link
             // Strip the absRefPrefix from the URLs.
             $urlPrefix = (string)$this->getTypoScriptFrontendController()->absRefPrefix;
             if ($urlPrefix !== '' && str_starts_with($url, $urlPrefix)) {
