@@ -37,24 +37,14 @@ class LinkModifier
      */
     protected $frontendController;
 
-//    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, ContentObjectRenderer $contentObjectRenderer = null)
-//    {
-//        $this->frontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
-//        $this->contentObjectRenderer = $contentObjectRenderer;
-//    }
-
     public function __invoke(AfterLinkIsGeneratedEvent $event): void
     {
-        $linkInstructions = $event->getLinkInstructions();
-
-        // todo get context and configuration
-        $context = $event->getLinkResult()->getType();
-        $configuration = $event->getLinkResult()->getLinkConfiguration();
-        
-        if ($this->isEnabled($context, $configuration)) {
+        if ($this->isEnabled($event)) {
+            $url = $event->getLinkResult()->getUrl();
+            $context = $event->getLinkResult()->getType();
+            $configuration = $event->getLinkResult()->getLinkConfiguration();
             $this->contentObjectRenderer = $event->getContentObjectRenderer();
 
-            $url = $event->getLinkResult()->getUrl();
             //$url = $event->getLinkResult()->withAttribute('data-enable-lightbox', true);
             // todo modify link
             // Strip the absRefPrefix from the URLs.
@@ -68,13 +58,33 @@ class LinkModifier
                 $url = str_replace('%2F', '/', rawurlencode(rawurldecode($url)));
             }
 
-            $url = $this->build($url, $configuration['jumpurl.'] ?? []);
+            $urlParameters = ['jumpurl' => $url];
+
+            $jumpUrlConfig = $configuration['jumpurl.'] ?? [];
+
+            // see if a secure File URL should be built
+            if (!empty($jumpUrlConfig['secure'])) {
+                $secureParameters = $this->getParametersForSecureFile(
+                    $url,
+                    $jumpUrlConfig['secure.'] ?? []
+                );
+                $urlParameters = array_merge($urlParameters, $secureParameters);
+            } else {
+                $urlParameters['juHash'] = JumpUrlUtility::calculateHash($url);
+            }
+
+            $typoLinkConfiguration = [
+                'parameter' => $this->getTypoLinkParameter($jumpUrlConfig),
+                'additionalParams' => GeneralUtility::implodeArrayForUrl('', $urlParameters),
+            ];
+
+            $jumpurl = $this->getContentObjectRenderer()->typoLink_URL($typoLinkConfiguration);
 
             // Now add the prefix again if it was not added by a typolink call already.
-            if ($urlPrefix !== '' && !str_starts_with($url, $urlPrefix)) {
-                $url = $urlPrefix . $url;
+            if ($urlPrefix !== '' && !str_starts_with($jumpurl, $urlPrefix)) {
+                $jumpurl = $urlPrefix . $jumpurl;
             }
-            $event->setLinkResult($event->getLinkResult()->withAttribute('href', $url));
+            $event->setLinkResult($event->getLinkResult()->withAttributes(['href' => $jumpurl, 'jumpurl' => $url]));
         }
     }
     
@@ -86,9 +96,13 @@ class LinkModifier
      * @param array $configuration Optional jump URL configuration
      * @return bool TRUE if enabled, FALSE if disabled
      */
-    protected function isEnabled($context, array $configuration = [])
+    protected function isEnabled(AfterLinkIsGeneratedEvent $event)
     {
-        if (!empty($configuration['jumpurl.']['forceDisable'] ?? false)) {
+        $url = $event->getLinkResult()->getUrl();
+        $context = $event->getLinkResult()->getType();
+        $configuration = $event->getLinkResult()->getLinkConfiguration();
+
+        if (str_contains($url, 'juHash=')) {
             return false;
         }
 
@@ -109,38 +123,6 @@ class LinkModifier
         }
 
         return $enabled;
-    }
-
-    /**
-     * Builds a jump URL for the given URL
-     *
-     * @param string $url The URL to which will be jumped
-     * @param array $configuration Optional TypoLink configuration
-     * @return string The generated URL
-     */
-    protected function build($url, array $configuration)
-    {
-        $urlParameters = ['jumpurl' => $url];
-
-        // see if a secure File URL should be built
-        if (!empty($configuration['secure'])) {
-            $secureParameters = $this->getParametersForSecureFile(
-                $url,
-                isset($configuration['secure.']) ? $configuration['secure.'] : []
-            );
-            $urlParameters = array_merge($urlParameters, $secureParameters);
-        } else {
-            $urlParameters['juHash'] = JumpUrlUtility::calculateHash($url);
-        }
-
-        $typoLinkConfiguration = [
-            'parameter' => $this->getTypoLinkParameter($configuration),
-            'additionalParams' => GeneralUtility::implodeArrayForUrl('', $urlParameters),
-            // make sure jump URL is not called again
-            'jumpurl.' => ['forceDisable' => '1']
-        ];
-
-        return $this->getContentObjectRenderer()->typoLink_URL($typoLinkConfiguration);
     }
 
     /**
