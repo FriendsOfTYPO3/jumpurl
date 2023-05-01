@@ -23,4 +23,20 @@ use TYPO3\CMS\Frontend\Typolink\PageLinkBuilder;
 
 class LinkModifier
 {
+    /**
+     * @var ContentObjectRenderer
+     */
+    protected $contentObjectRenderer;
+
+    /**
+     * @var TypoScriptFrontendController
+     */
+    protected $frontendController;
+
+    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, ContentObjectRenderer $contentObjectRenderer = null)
+    {
+        $this->frontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
+        $this->contentObjectRenderer = $contentObjectRenderer;
+    }
+
 }
