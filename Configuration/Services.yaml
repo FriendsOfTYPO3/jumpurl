@@ -1,0 +1,10 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  FoT3\Jumpurl\TypoLink\LinkModifier:
+    tags:
+      - name: event.listener
+        identifier: 'jumpurlLinkModifierListener'
