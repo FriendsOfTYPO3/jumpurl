@@ -8,3 +8,4 @@ services:
     tags:
       - name: event.listener
         identifier: 'jumpurlLinkModifierListener'
+        event: TYPO3\CMS\Frontend\Event\AfterLinkIsGeneratedEvent
