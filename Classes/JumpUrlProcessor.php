@@ -38,7 +38,7 @@ class JumpUrlProcessor implements UrlProcessorInterface
 
     public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, ContentObjectRenderer $contentObjectRenderer = null)
     {
-        $this->frontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
+        $this->frontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'] ?? null;
         $this->contentObjectRenderer = $contentObjectRenderer;
     }
 
