@@ -40,12 +40,13 @@ class LinkModifier
 
     public function __invoke(AfterLinkIsGeneratedEvent $event): void
     {
+        $this->contentObjectRenderer = $event->getContentObjectRenderer();
+        $this->frontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
+
         if ($this->isEnabled($event)) {
             $url = $event->getLinkResult()->getUrl();
             $context = $event->getLinkResult()->getType();
             $configuration = $event->getLinkResult()->getLinkConfiguration();
-            $this->contentObjectRenderer = $event->getContentObjectRenderer();
-            $this->frontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
 
             // Strip the absRefPrefix from the URLs.
             $urlPrefix = (string)$this->getTypoScriptFrontendController()->absRefPrefix;
