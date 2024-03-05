@@ -1,0 +1,11 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  FoT3\Jumpurl\TypoLink\LinkModifier:
+    tags:
+      - name: event.listener
+        identifier: 'jumpurlLinkModifierListener'
+        event: TYPO3\CMS\Frontend\Event\AfterLinkIsGeneratedEvent

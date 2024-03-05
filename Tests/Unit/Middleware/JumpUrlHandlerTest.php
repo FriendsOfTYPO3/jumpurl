@@ -1,5 +1,5 @@
 <?php
-namespace FoT3\Jumpurl\Tests\Unit;
+namespace FoT3\Jumpurl\Tests\Unit\Middleware;
 
 /*
  * This file is part of the TYPO3 CMS project.
@@ -14,14 +14,20 @@ namespace FoT3\Jumpurl\Tests\Unit;
  * The TYPO3 project - inspiring people to share!
  */
 
-use FoT3\Jumpurl\JumpUrlHandler;
 use FoT3\Jumpurl\JumpUrlUtility;
+use FoT3\Jumpurl\Middleware\JumpUrlHandler;
 use Nimut\TestingFramework\TestCase\UnitTestCase;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use TYPO3\CMS\Core\Http\NullResponse;
+use TYPO3\CMS\Core\Http\Response;
+use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
-use TYPO3\CMS\Core\Utility\HttpUtility;
-use TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication;
+use TYPO3\CMS\Core\Resource\ResourceStorage;
+use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
@@ -47,19 +53,23 @@ class JumpUrlHandlerTest extends UnitTestCase
     protected $tsfe;
 
     /**
+     * @var RequestHandlerInterface
+     */
+    protected $defaultRequestHandler;
+    /**
      * Sets environment variables and initializes global mock object.
      */
     protected function setUp()
     {
         parent::setUp();
 
+        $this->defaultRequestHandler = new class implements RequestHandlerInterface {
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                return new NullResponse();
+            }
+        };
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] = '12345';
-
-        $this->jumpUrlHandler = $this->getMock(
-            JumpUrlHandler::class,
-            ['isLocationDataValid', 'getResourceFactory', 'getTypoScriptFrontendController', 'readFileAndExit', 'redirect']
-        );
-
         $this->tsfe = $this->getAccessibleMock(
             TypoScriptFrontendController::class,
             ['getPagesTSconfig'],
@@ -67,9 +77,12 @@ class JumpUrlHandlerTest extends UnitTestCase
             '',
             false
         );
-        $this->jumpUrlHandler->expects($this->any())
-            ->method('getTypoScriptFrontendController')
-            ->will($this->returnValue($this->tsfe));
+        $this->jumpUrlHandler = $this->getMockBuilder(JumpUrlHandler::class)
+            ->setMethods(
+                ['isLocationDataValid', 'getResourceFactory', 'getTypoScriptFrontendController', 'readFileAndExit', 'redirect']
+            )
+            ->setConstructorArgs([$this->tsfe, new TimeTracker(false)])
+            ->getMock();
     }
 
     /**
@@ -115,32 +128,27 @@ class JumpUrlHandlerTest extends UnitTestCase
      */
     public function jumpUrlDefaultAcceptsValidUrls($hash, $jumpUrl)
     {
-        $_GET['juHash'] = $hash;
-        $_GET['jumpurl'] = $jumpUrl;
-
-        $this->jumpUrlHandler->expects($this->once())
-            ->method('redirect')
-            ->with($jumpUrl, HttpUtility::HTTP_STATUS_303);
-
-        $this->jumpUrlHandler->canHandleCurrentUrl();
-        $this->jumpUrlHandler->handle();
+        $request = new ServerRequest('https://example.com/');
+        $request = $request->withQueryParams(['juHash' => $hash, 'jumpurl' => $jumpUrl]);
+        $subject = new JumpUrlHandler($this->tsfe, new TimeTracker(false));
+        $response = $subject->process($request, $this->defaultRequestHandler);
+        self::assertEquals(303, $response->getStatusCode());
     }
 
     /**
      * @test
      * @dataProvider jumpUrlDefaultValidParametersDataProvider
-     * @expectedException \Exception
-     * @expectedExceptionCode 1359987599
      * @param string $hash
      * @param string $jumpUrl
      */
     public function jumpUrlDefaultFailsOnInvalidHash($hash, $jumpUrl)
     {
-        $_GET['jumpurl'] = $jumpUrl;
-        $_GET['juHash'] = $hash . '1';
-
-        $this->jumpUrlHandler->canHandleCurrentUrl();
-        $this->jumpUrlHandler->handle();
+        self::expectException(\Exception::class);
+        self::expectExceptionCode(1359987599);
+        $request = new ServerRequest('https://example.com/');
+        $request = $request->withQueryParams(['juHash' => $hash . '1', 'jumpurl' => $jumpUrl]);
+        $subject = new JumpUrlHandler($this->tsfe, new TimeTracker(false));
+        $subject->process($request, $this->defaultRequestHandler);
     }
 
     /**
@@ -153,11 +161,10 @@ class JumpUrlHandlerTest extends UnitTestCase
     {
         $tsConfig['TSFE.']['jumpUrl_transferSession'] = 1;
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|FrontendUserAuthentication $frontendUserMock */
-        $frontendUserMock = $this->getMock(FrontendUserAuthentication::class);
-        $frontendUserMock->id = 123;
+        $frontendUser = new \stdClass();
+        $frontendUser->id = 123;
 
-        $this->tsfe->_set('fe_user', $frontendUserMock);
+        $this->tsfe->fe_user = $frontendUser;
         $this->tsfe->expects($this->once())
             ->method('getPagesTSconfig')
             ->will($this->returnValue($tsConfig));
@@ -165,15 +172,13 @@ class JumpUrlHandlerTest extends UnitTestCase
         $sessionGetParameter = (strpos($jumpUrl, '?') === false ? '?' : '') . '&FE_SESSION_KEY=123-fc9f825a9af59169895f3bb28267a42f';
         $expectedJumpUrl = $jumpUrl . $sessionGetParameter;
 
-        $this->jumpUrlHandler->expects($this->once())
-            ->method('redirect')
-            ->with($expectedJumpUrl, HttpUtility::HTTP_STATUS_303);
+        $request = new ServerRequest('https://example.com/');
+        $request = $request->withQueryParams(['juHash' => $hash, 'jumpurl' => $jumpUrl]);
 
-        $_GET['jumpurl'] = $jumpUrl;
-        $_GET['juHash'] = $hash;
-
-        $this->jumpUrlHandler->canHandleCurrentUrl();
-        $this->jumpUrlHandler->handle();
+        $subject = new JumpUrlHandler($this->tsfe, new TimeTracker(false));
+        $response = $subject->process($request, $this->defaultRequestHandler);
+        self::assertEquals(303, $response->getStatusCode());
+        self::assertEquals($expectedJumpUrl, $response->getHeaderLine('Location'));
     }
 
     /**
@@ -208,15 +213,18 @@ class JumpUrlHandlerTest extends UnitTestCase
      */
     public function jumpUrlSecureAcceptsValidUrls($hash, $jumpUrl)
     {
-        $_GET['jumpurl'] = $jumpUrl;
-        $this->prepareJumpUrlSecureTest($hash);
-
-        $fileMock = $this->getMock(File::class, ['dummy'], [], '', false);
-        $resourceFactoryMock = $this->getMock(ResourceFactory::class, ['retrieveFileOrFolderObject']);
+        $fileMock = $this->getMockBuilder(File::class)->disableOriginalConstructor()->setMethods(['dummy'])->getMock();
+        $storageMock = $this->getMockBuilder(ResourceStorage::class)->disableOriginalConstructor()->setMethods(['streamFile'])->getMock();
+        $resourceFactoryMock = $this->getMockBuilder(ResourceFactory::class)->disableOriginalConstructor()->setMethods(['retrieveFileOrFolderObject'])->getMock();
+        $fileMock->setStorage($storageMock);
 
         $resourceFactoryMock->expects($this->once())
             ->method('retrieveFileOrFolderObject')
             ->will($this->returnValue($fileMock));
+
+        $storageMock->expects($this->once())
+            ->method('streamFile')
+            ->will($this->returnValue(new Response(null, 200, ['X-TYPO3-Test' => 'JumpURL Download Test'])));
 
         $this->jumpUrlHandler->expects($this->once())
             ->method('isLocationDataValid')
@@ -227,28 +235,20 @@ class JumpUrlHandlerTest extends UnitTestCase
             ->method('getResourceFactory')
             ->will($this->returnValue($resourceFactoryMock));
 
-        $this->jumpUrlHandler->expects($this->once())
-            ->method('readFileAndExit')
-            ->with($fileMock);
-
-        $this->jumpUrlHandler->canHandleCurrentUrl();
-        $this->jumpUrlHandler->handle();
+        $request = $this->prepareJumpUrlSecureTest($jumpUrl, $hash);
+        $response = $this->jumpUrlHandler->process($request, $this->defaultRequestHandler);
+        self::assertEquals('JumpURL Download Test', $response->getHeaderLine('X-TYPO3-Test'));
     }
 
     /**
      * @test
      * @dataProvider jumpUrlSecureValidParametersDataProvider
-     * @expectedException \Exception
-     * @expectedExceptionCode 1294585193
      * @param string $hash
      * @param string $jumpUrl
      */
     public function jumpUrlSecureFailsIfFileDoesNotExist($hash, $jumpUrl)
     {
-        $_GET['jumpurl'] = $jumpUrl;
-        $this->prepareJumpUrlSecureTest($hash);
-
-        $resourceFactoryMock = $this->getMock(ResourceFactory::class, ['retrieveFileOrFolderObject']);
+        $resourceFactoryMock = $this->getMockBuilder(ResourceFactory::class)->disableOriginalConstructor()->setMethods(['retrieveFileOrFolderObject'])->getMock();
         $resourceFactoryMock->expects($this->once())
             ->method('retrieveFileOrFolderObject')
             ->will($this->throwException(new FileDoesNotExistException()));
@@ -262,37 +262,34 @@ class JumpUrlHandlerTest extends UnitTestCase
             ->method('getResourceFactory')
             ->will($this->returnValue($resourceFactoryMock));
 
-        $this->jumpUrlHandler->canHandleCurrentUrl();
-        $this->jumpUrlHandler->handle();
+        self::expectException(\Exception::class);
+        self::expectExceptionCode(1294585193);
+        $request = $this->prepareJumpUrlSecureTest($jumpUrl, $hash);
+        $this->jumpUrlHandler->process($request, $this->defaultRequestHandler);
     }
 
     /**
      * @test
      * @dataProvider jumpUrlSecureValidParametersDataProvider
-     * @expectedException \Exception
-     * @expectedExceptionCode 1294585195
      * @param string $hash
      * @param string $jumpUrl
      */
     public function jumpUrlSecureFailsOnDeniedAccess($hash, $jumpUrl)
     {
-        $_GET['jumpurl'] = $jumpUrl;
-        $this->prepareJumpUrlSecureTest($hash);
-
         $this->jumpUrlHandler->expects($this->once())
             ->method('isLocationDataValid')
             ->with($this->defaultLocationData)
             ->will($this->returnValue(false));
 
-        $this->jumpUrlHandler->canHandleCurrentUrl();
-        $this->jumpUrlHandler->handle();
+        self::expectException(\Exception::class);
+        self::expectExceptionCode(1294585195);
+        $request = $this->prepareJumpUrlSecureTest($jumpUrl, $hash);
+        $this->jumpUrlHandler->process($request, $this->defaultRequestHandler);
     }
 
     /**
      * @test
      * @dataProvider jumpUrlSecureValidParametersDataProvider
-     * @expectedException \Exception
-     * @expectedExceptionCode 1294585196
      * @param string $hash
      * @param string $jumpUrl
      */
@@ -300,12 +297,18 @@ class JumpUrlHandlerTest extends UnitTestCase
         $hash,
         $jumpUrl
     ) {
-        $_GET['juSecure'] = '1';
-        $_GET['juHash'] = $hash . '1';
-        $_GET['locationData'] = $this->defaultLocationData;
+        $queryParams = [
+            'jumpurl' => 'random',
+            'juSecure' => '1',
+            'juHash' => $hash . '1',
+            'locationData' => $this->defaultLocationData
+        ];
 
-        $this->jumpUrlHandler->canHandleCurrentUrl();
-        $this->jumpUrlHandler->handle();
+        self::expectException(\Exception::class);
+        self::expectExceptionCode(1294585196);
+        $request = new ServerRequest('https://example.com');
+        $request = $request->withQueryParams($queryParams);
+        $this->jumpUrlHandler->process($request, $this->defaultRequestHandler);
     }
 
     /**
@@ -342,22 +345,31 @@ class JumpUrlHandlerTest extends UnitTestCase
 
         $hash = JumpUrlUtility::calculateHashSecure($path, '', '');
 
-        $_GET['jumpurl'] = $path;
-        $_GET['juSecure'] = '1';
-        $_GET['juHash'] = $hash;
-        $_GET['locationData'] = '';
-
-        $this->jumpUrlHandler->canHandleCurrentUrl();
-        $this->jumpUrlHandler->handle();
+        $queryParams = [
+            'jumpurl' => $path,
+            'juSecure' => '1',
+            'juHash' => $hash,
+            'locationData' => ''
+        ];
+        $request = new ServerRequest('https://example.com');
+        $request = $request->withQueryParams($queryParams);
+        $this->jumpUrlHandler->process($request, $this->defaultRequestHandler);
     }
 
     /**
+     * @param string $jumpurl
      * @param string $hash
+     * @return ServerRequest
      */
-    protected function prepareJumpUrlSecureTest($hash)
+    protected function prepareJumpUrlSecureTest(string $jumpurl, string $hash): ServerRequestInterface
     {
-        $_GET['juSecure'] = '1';
-        $_GET['juHash'] = $hash;
-        $_GET['locationData'] = $this->defaultLocationData;
+        $queryParams = [
+            'jumpurl' => $jumpurl,
+            'juSecure' => '1',
+            'juHash' => $hash,
+            'locationData' => $this->defaultLocationData
+        ];
+        $request = new ServerRequest('https://example.com/');
+        return $request->withQueryParams($queryParams);
     }
 }

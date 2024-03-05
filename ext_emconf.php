@@ -1,21 +1,19 @@
 <?php
-$EM_CONF[$_EXTKEY] = array(
+$EM_CONF[$_EXTKEY] = [
     'title' => 'JumpURL',
     'description' => 'Allows to modify links to create Jump URLs created in the frontend of the TYPO3 Core.',
     'category' => 'fe',
     'author' => 'Friends of TYPO3',
     'author_email' => 'friendsof@typo3.org',
     'state' => 'stable',
-    'uploadfolder' => 0,
-    'createDirs' => '',
     'clearCacheOnLoad' => 1,
     'author_company' => '',
-    'version' => '7.7.1',
-    'constraints' => array(
-        'depends' => array(
-            'typo3' => '7.6.0-8.7.99',
-        ),
-        'conflicts' => array(),
-        'suggests' => array(),
-    ),
-);
+    'version' => '8.2.2',
+    'constraints' => [
+        'depends' => [
+            'typo3' => '9.5.0-12.4.99',
+        ],
+        'conflicts' => [],
+        'suggests' => [],
+    ],
+];
