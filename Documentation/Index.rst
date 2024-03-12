@@ -54,4 +54,3 @@ own extension, which got its own public repository.
    :hidden:
 
    Sitemap
-   genindex
