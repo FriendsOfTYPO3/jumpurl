@@ -16,6 +16,8 @@ namespace FoT3\Jumpurl\TypoLink;
  */
 
 use FoT3\Jumpurl\JumpUrlUtility;
+use TYPO3\CMS\Core\Http\ApplicationType;
+use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\LinkHandling\LinkService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
@@ -40,60 +42,62 @@ class LinkModifier
 
     public function __invoke(AfterLinkIsGeneratedEvent $event): void
     {
-        if ($this->isEnabled($event)) {
-            $url = $event->getLinkResult()->getUrl();
-            $context = $event->getLinkResult()->getType();
-            $configuration = $event->getLinkResult()->getLinkConfiguration();
-            $this->contentObjectRenderer = $event->getContentObjectRenderer();
-            $this->frontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
+        if (($GLOBALS['TYPO3_REQUEST'] ?? null) instanceof ServerRequest && ApplicationType::fromRequest($GLOBALS['TYPO3_REQUEST'])->isFrontend()) {
+            if ($this->isEnabled($event)) {
+                $url = $event->getLinkResult()->getUrl();
+                $context = $event->getLinkResult()->getType();
+                $configuration = $event->getLinkResult()->getLinkConfiguration();
+                $this->contentObjectRenderer = $event->getContentObjectRenderer();
+                $this->frontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
 
-            // Strip the absRefPrefix from the URLs.
-            $urlPrefix = (string)$this->getTypoScriptFrontendController()->absRefPrefix;
-            if ($urlPrefix !== '' && str_starts_with($url, $urlPrefix)) {
-                $url = substr($url, strlen($urlPrefix));
-            }
-
-            // Make sure the slashes in the file URL are not encoded.
-            if ($context === LinkService::TYPE_FILE) {
-                $url = str_replace('%2F', '/', rawurlencode(rawurldecode($url)));
-            }
-
-            if ($context === LinkService::TYPE_PAGE && $url === '') {
-                $url = '/';
-            }
-
-            $urlParameters = ['jumpurl' => $url];
-
-            $jumpUrlConfig = $configuration['jumpurl.'] ?? [];
-
-            // see if a secure File URL should be built
-            if (!empty($jumpUrlConfig['secure'])) {
-                $secureParameters = $this->getParametersForSecureFile(
-                    $url,
-                    $jumpUrlConfig['secure.'] ?? []
-                );
-                $urlParameters = array_merge($urlParameters, $secureParameters);
-            } else {
-                $urlParameters['juHash'] = JumpUrlUtility::calculateHash($url);
-            }
-
-            $typoLinkConfiguration = [
-                'parameter' => $this->getTypoLinkParameter($jumpUrlConfig),
-                'additionalParams' => GeneralUtility::implodeArrayForUrl('', $urlParameters),
-            ];
-
-            $jumpurl = $this->getContentObjectRenderer()->typoLink_URL($typoLinkConfiguration);
-
-            // Now add the prefix again if it was not added by a typolink call already.
-            if ($urlPrefix !== '') {
-                if (!str_starts_with($jumpurl, $urlPrefix)) {
-                    $jumpurl = $urlPrefix . $jumpurl;
+                // Strip the absRefPrefix from the URLs.
+                $urlPrefix = (string)$this->getTypoScriptFrontendController()->absRefPrefix;
+                if ($urlPrefix !== '' && str_starts_with($url, $urlPrefix)) {
+                    $url = substr($url, strlen($urlPrefix));
                 }
-                if (!str_starts_with($url, $urlPrefix)) {
-                    $url = $urlPrefix . $url;
+
+                // Make sure the slashes in the file URL are not encoded.
+                if ($context === LinkService::TYPE_FILE) {
+                    $url = str_replace('%2F', '/', rawurlencode(rawurldecode($url)));
                 }
+
+                if ($context === LinkService::TYPE_PAGE && $url === '') {
+                    $url = '/';
+                }
+
+                $urlParameters = ['jumpurl' => $url];
+
+                $jumpUrlConfig = $configuration['jumpurl.'] ?? [];
+
+                // see if a secure File URL should be built
+                if (!empty($jumpUrlConfig['secure'])) {
+                    $secureParameters = $this->getParametersForSecureFile(
+                        $url,
+                        $jumpUrlConfig['secure.'] ?? []
+                    );
+                    $urlParameters = array_merge($urlParameters, $secureParameters);
+                } else {
+                    $urlParameters['juHash'] = JumpUrlUtility::calculateHash($url);
+                }
+
+                $typoLinkConfiguration = [
+                    'parameter' => $this->getTypoLinkParameter($jumpUrlConfig),
+                    'additionalParams' => GeneralUtility::implodeArrayForUrl('', $urlParameters),
+                ];
+
+                $jumpurl = $this->getContentObjectRenderer()->typoLink_URL($typoLinkConfiguration);
+
+                // Now add the prefix again if it was not added by a typolink call already.
+                if ($urlPrefix !== '') {
+                    if (!str_starts_with($jumpurl, $urlPrefix)) {
+                        $jumpurl = $urlPrefix . $jumpurl;
+                    }
+                    if (!str_starts_with($url, $urlPrefix)) {
+                        $url = $urlPrefix . $url;
+                    }
+                }
+                $event->setLinkResult($event->getLinkResult()->withAttributes(['href' => $jumpurl, 'jumpurl' => $url]));
             }
-            $event->setLinkResult($event->getLinkResult()->withAttributes(['href' => $jumpurl, 'jumpurl' => $url]));
         }
     }
 
