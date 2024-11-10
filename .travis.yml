@@ -37,15 +37,15 @@ jobs:
   fast_finish: true
   include:
     - stage: test
-      php: 7.2
-      env: TYPO3=^8.7
+      php: 8.2
+      env: TYPO3=^12.4
     - stage: test
-      php: 7.2
-      env: TYPO3=^9.5
+      php: 8.2
+      env: TYPO3=^13.4
 
     - stage: publish to ter
       if: tag IS present
-      php: 7.2
+      php: 8.2
       before_install: skip
       install: skip
       before_script: skip

@@ -154,15 +154,9 @@ class JumpUrlHandler implements MiddlewareInterface
         
         // Check if requested file accessable
         $fileAccessAllowed = false;
-        if ((new Typo3Version())->getMajorVersion() < 11) {
-            $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName) 
-                && GeneralUtility::verifyFilenameAgainstDenyPattern($absoluteFileName)
-                && !GeneralUtility::isFirstPartOfStr($absoluteFileName, Environment::getLegacyConfigPath());
-        } else {
-            $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName)
-                && GeneralUtility::makeInstance(FileNameValidator::class)->isValid($absoluteFileName)
-                && !str_starts_with($absoluteFileName, Environment::getLegacyConfigPath());
-	    }
+        $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName)
+            && GeneralUtility::makeInstance(FileNameValidator::class)->isValid($absoluteFileName)
+            && !str_starts_with($absoluteFileName, Environment::getLegacyConfigPath());
         if (!$fileAccessAllowed) {
             throw new \Exception('The requested file was not allowed to be accessed through Jump URL. The path or file is not allowed.', 1294585194);
         }
