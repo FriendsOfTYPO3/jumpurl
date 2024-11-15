@@ -19,12 +19,16 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\Security\FileNameValidator;
+use TYPO3\CMS\Core\Site\Entity\NullSite;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
+use TYPO3\CMS\Core\TypoScript\PageTsConfig;
+use TYPO3\CMS\Core\TypoScript\PageTsConfigFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
@@ -69,7 +73,7 @@ class JumpUrlHandler implements MiddlewareInterface
             }
             // Regular jump URL
             $this->validateIfJumpUrlRedirectIsAllowed($jumpUrl, $juHash);
-            return $this->redirectToJumpUrl($jumpUrl);
+            return $this->redirectToJumpUrl($jumpUrl, $request);
         }
         return $handler->handle($request);
     }
@@ -81,9 +85,9 @@ class JumpUrlHandler implements MiddlewareInterface
      * @throws \Exception
      * @return ResponseInterface
      */
-    protected function redirectToJumpUrl(string $jumpUrl): ResponseInterface
+    protected function redirectToJumpUrl(string $jumpUrl, ServerRequestInterface $request): ResponseInterface
     {
-        $pageTSconfig = $this->getTypoScriptFrontendController()->getPagesTSconfig();
+        $pageTSconfig = $this->getPageTsConfig($request);
         $pageTSconfig = array_key_exists('TSFE.', $pageTSconfig) && is_array($pageTSconfig['TSFE.'] ?? false) ? $pageTSconfig['TSFE.'] : [];
 
         // Allow sections in links
@@ -92,6 +96,30 @@ class JumpUrlHandler implements MiddlewareInterface
 
         $statusCode = $this->getRedirectStatusCode($pageTSconfig);
         return new RedirectResponse($jumpUrl, $statusCode);
+    }
+
+    /**
+     * @param ServerRequestInterface $request
+     * @return array
+     * @throws \JsonException
+     * @throws \TYPO3\CMS\Core\Cache\Exception\NoSuchCacheException
+     */
+    protected function getPageTsConfig(ServerRequestInterface $request): array
+    {
+        $pageInformation = $request->getAttribute('frontend.page.information');
+        $id = $pageInformation->getId();
+        $runtimeCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('runtime');
+        $pageTsConfig = $runtimeCache->get('pageTsConfig-' . $id);
+        if ($pageTsConfig instanceof PageTsConfig) {
+            return $pageTsConfig->getPageTsConfigArray();
+        }
+        $fullRootLine = $pageInformation->getRootLine();
+        ksort($fullRootLine);
+        $site = $request->getAttribute('site') ?? new NullSite();
+        $pageTsConfigFactory = GeneralUtility::makeInstance(PageTsConfigFactory::class);
+        $pageTsConfig = $pageTsConfigFactory->create($fullRootLine, $site);
+        $runtimeCache->set('pageTsConfig-' . $id, $pageTsConfig);
+        return $pageTsConfig->getPageTsConfigArray();
     }
 
     /**
@@ -126,15 +154,9 @@ class JumpUrlHandler implements MiddlewareInterface
         
         // Check if requested file accessable
         $fileAccessAllowed = false;
-        if ((new Typo3Version())->getMajorVersion() < 11) {
-            $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName) 
-                && GeneralUtility::verifyFilenameAgainstDenyPattern($absoluteFileName)
-                && !GeneralUtility::isFirstPartOfStr($absoluteFileName, Environment::getLegacyConfigPath());
-        } else {
-            $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName)
-                && GeneralUtility::makeInstance(FileNameValidator::class)->isValid($absoluteFileName)
-                && !str_starts_with($absoluteFileName, Environment::getLegacyConfigPath());
-	    }
+        $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName)
+            && GeneralUtility::makeInstance(FileNameValidator::class)->isValid($absoluteFileName)
+            && !str_starts_with($absoluteFileName, Environment::getLegacyConfigPath());
         if (!$fileAccessAllowed) {
             throw new \Exception('The requested file was not allowed to be accessed through Jump URL. The path or file is not allowed.', 1294585194);
         }
@@ -157,7 +179,7 @@ class JumpUrlHandler implements MiddlewareInterface
     protected function isLocationDataValid(string $locationData): bool
     {
         $isValidLocationData = false;
-        list($pageUid, $table, $recordUid) = explode(':', $locationData);
+        [$pageUid, $table, $recordUid] = explode(':', $locationData);
         $pageRepository = $this->getTypoScriptFrontendController()->sys_page;
         if (empty($table) || $pageRepository->checkRecord($table, $recordUid, true)) {
             // This check means that a record is checked only if the locationData has a value for a

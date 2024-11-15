@@ -17,6 +17,10 @@ namespace FoT3\Jumpurl\TypoLink;
 
 use FoT3\Jumpurl\JumpUrlUtility;
 use TYPO3\CMS\Core\LinkHandling\LinkService;
+use TYPO3\CMS\Core\Site\Entity\NullSite;
+use TYPO3\CMS\Core\Site\Entity\Site;
+use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
+use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
@@ -36,12 +40,12 @@ class LinkModifier
     /**
      * @var TypoScriptFrontendController
      */
-    protected $frontendController;
+    protected $typoScriptFrontendController;
 
     public function __invoke(AfterLinkIsGeneratedEvent $event): void
     {
         $this->contentObjectRenderer = $event->getContentObjectRenderer();
-        $this->frontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
+        $this->typoScriptFrontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
 
         if ($this->isEnabled($event)) {
             $url = $event->getLinkResult()->getUrl();
@@ -192,13 +196,35 @@ class LinkModifier
 
     protected function getTypoScriptFrontendController(): TypoScriptFrontendController
     {
-        $tsfe = $this->frontendController ?? $GLOBALS['TSFE'] ?? null;
-        if ($tsfe instanceof TypoScriptFrontendController) {
-            return $tsfe;
+        if ($this->typoScriptFrontendController instanceof TypoScriptFrontendController) {
+            return $this->typoScriptFrontendController;
         }
-        // workaround for getting a TSFE object in Backend
-        $linkBuilder = GeneralUtility::makeInstance(PageLinkBuilder::class, new ContentObjectRenderer());
-        return $linkBuilder->getTypoScriptFrontendController();
+
+        // This usually happens when typolink is created by the TYPO3 Backend, where no TSFE object
+        // is there. This functionality is currently completely internal, as these links cannot be
+        // created properly from the Backend.
+        // However, this is added to avoid any exceptions when trying to create a link.
+        // Detecting the "first" site usually comes from the fact that TSFE needs to be instantiated
+        // during tests
+        $request = $this->contentObjectRenderer->getRequest();
+        $site = $request->getAttribute('site');
+        if (!$site instanceof Site) {
+            $sites = GeneralUtility::makeInstance(SiteFinder::class)->getAllSites();
+            $site = reset($sites);
+            if (!$site instanceof Site) {
+                $site = new NullSite();
+            }
+        }
+        $language = $request->getAttribute('language');
+        if (!$language instanceof SiteLanguage) {
+            $language = $site->getDefaultLanguage();
+        }
+        $request = $request->withAttribute('language', $language);
+
+        $this->typoScriptFrontendController = GeneralUtility::makeInstance(TypoScriptFrontendController::class);
+        $this->typoScriptFrontendController->initializePageRenderer($request);
+        $this->typoScriptFrontendController->initializeLanguageService($request);
+        return $this->typoScriptFrontendController;
     }
 
     protected function getContentObjectRenderer(): ContentObjectRenderer
