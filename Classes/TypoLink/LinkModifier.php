@@ -16,6 +16,8 @@ namespace FoT3\Jumpurl\TypoLink;
  */
 
 use FoT3\Jumpurl\JumpUrlUtility;
+use TYPO3\CMS\Core\Http\ApplicationType;
+use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\LinkHandling\LinkService;
 use TYPO3\CMS\Core\Site\Entity\NullSite;
 use TYPO3\CMS\Core\Site\Entity\Site;
@@ -47,7 +49,8 @@ class LinkModifier
         $this->contentObjectRenderer = $event->getContentObjectRenderer();
         $this->typoScriptFrontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
 
-        if ($this->isEnabled($event)) {
+        $isFrontendRequest = ($GLOBALS['TYPO3_REQUEST'] ?? null) instanceof ServerRequest && ApplicationType::fromRequest($GLOBALS['TYPO3_REQUEST'])->isFrontend();
+        if ($isFrontendRequest && $this->isEnabled($event)) {
             $url = $event->getLinkResult()->getUrl();
             $context = $event->getLinkResult()->getType();
             $configuration = $event->getLinkResult()->getLinkConfiguration();
