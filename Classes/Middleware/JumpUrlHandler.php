@@ -55,7 +55,7 @@ class JumpUrlHandler implements MiddlewareInterface
      */
     protected $typoScriptFrontendController;
 
-    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, TimeTracker $timeTracker = null)
+    public function __construct(?TypoScriptFrontendController $typoScriptFrontendController = null, ?TimeTracker $timeTracker = null)
     {
         $this->typoScriptFrontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
         $this->timeTracker = $timeTracker ?? GeneralUtility::makeInstance(TimeTracker::class);
