@@ -16,19 +16,20 @@ namespace FoT3\Jumpurl\TypoLink;
  */
 
 use FoT3\Jumpurl\JumpUrlUtility;
+use stdClass;
+use TYPO3\CMS\Core\Http\ApplicationType;
+use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\LinkHandling\LinkService;
+use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Site\Entity\NullSite;
 use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Event\AfterLinkIsGeneratedEvent;
 use TYPO3\CMS\Frontend\Http\UrlProcessorInterface;
-use TYPO3\CMS\Frontend\Typolink\LinkResultInterface;
-use TYPO3\CMS\Frontend\Typolink\PageLinkBuilder;
 
 class LinkModifier
 {
@@ -45,9 +46,9 @@ class LinkModifier
     public function __invoke(AfterLinkIsGeneratedEvent $event): void
     {
         $this->contentObjectRenderer = $event->getContentObjectRenderer();
-        $this->typoScriptFrontendController = $this->contentObjectRenderer->getTypoScriptFrontendController();
+        $isFrontendRequest = ($GLOBALS['TYPO3_REQUEST'] ?? null) instanceof ServerRequest && ApplicationType::fromRequest($GLOBALS['TYPO3_REQUEST'])->isFrontend();
 
-        if ($this->isEnabled($event)) {
+        if ($isFrontendRequest && $this->isEnabled($event)) {
             $url = $event->getLinkResult()->getUrl();
             $context = $event->getLinkResult()->getType();
             $configuration = $event->getLinkResult()->getLinkConfiguration();
@@ -79,7 +80,7 @@ class LinkModifier
                 );
                 $urlParameters = array_merge($urlParameters, $secureParameters);
             } else {
-                $urlParameters['juHash'] = JumpUrlUtility::calculateHash($url);
+                $urlParameters['juHash'] = JumpUrlUtility::calculateHash($url, 'jumpurl');
             }
 
             $typoLinkConfiguration = [
@@ -194,10 +195,10 @@ class LinkModifier
         return $linkParameter;
     }
 
-    protected function getTypoScriptFrontendController(): TypoScriptFrontendController
+    protected function getTypoScriptFrontendController(): TypoScriptFrontendController|stdClass
     {
-        if ($this->typoScriptFrontendController instanceof TypoScriptFrontendController) {
-            return $this->typoScriptFrontendController;
+        if (method_exists($this->contentObjectRenderer, 'getTypoScriptFrontendController') && $this->contentObjectRenderer->getTypoScriptFrontendController() instanceof TypoScriptFrontendController) {
+            return $this->contentObjectRenderer->getTypoScriptFrontendController();
         }
 
         // This usually happens when typolink is created by the TYPO3 Backend, where no TSFE object
@@ -221,10 +222,21 @@ class LinkModifier
         }
         $request = $request->withAttribute('language', $language);
 
-        $this->typoScriptFrontendController = GeneralUtility::makeInstance(TypoScriptFrontendController::class);
-        $this->typoScriptFrontendController->initializePageRenderer($request);
-        $this->typoScriptFrontendController->initializeLanguageService($request);
-        return $this->typoScriptFrontendController;
+        if (class_exists(TypoScriptFrontendController::class)) {
+            $this->typoScriptFrontendController = GeneralUtility::makeInstance(TypoScriptFrontendController::class);
+            $this->typoScriptFrontendController->initializePageRenderer($request);
+            $this->typoScriptFrontendController->initializeLanguageService($request);
+            return $this->typoScriptFrontendController;
+        }
+        $fakeTypoScriptFrontendController = new stdClass();
+        $fakeTypoScriptFrontendController->id = $request->getAttribute('frontend.page.information')->getId();
+        $pageArgs = $request->getAttribute('routing');
+        $typeNum = $pageArgs instanceof PageArguments ? (int)$pageArgs->getPageType() : 0;
+        $fakeTypoScriptFrontendController->type = $typeNum;
+        $typoScriptConfigArray = $request->getAttribute('frontend.typoscript')?->getConfigArray();
+        $fakeTypoScriptFrontendController->absRefPrefix = $typoScriptConfigArray['absRefPrefix'] ?? [];
+        $fakeTypoScriptFrontendController->config = $typoScriptConfigArray['config'] ?? [];
+        return $fakeTypoScriptFrontendController;
     }
 
     protected function getContentObjectRenderer(): ContentObjectRenderer

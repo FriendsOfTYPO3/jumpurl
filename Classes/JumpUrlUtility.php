@@ -14,6 +14,8 @@ namespace FoT3\Jumpurl;
  * The TYPO3 project - inspiring people to share!
  */
 
+use TYPO3\CMS\Core\Crypto\HashService;
+use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -27,9 +29,12 @@ class JumpUrlUtility
      * @param string $jumpUrl The target URL
      * @return string The calculated hash
      */
-    public static function calculateHash($jumpUrl)
+    public static function calculateHash($jumpUrl, $additionalSecret = '')
     {
-        return GeneralUtility::hmac($jumpUrl, 'jumpurl');
+        if ((new Typo3Version())->getMajorVersion() === 12) {
+            return GeneralUtility::hmac($jumpUrl, $additionalSecret);
+        }
+        return GeneralUtility::makeInstance(HashService::class)->hmac($jumpUrl, $additionalSecret);
     }
 
     /**
@@ -42,7 +47,6 @@ class JumpUrlUtility
      */
     public static function calculateHashSecure($jumpUrl, $locationData, $mimeType)
     {
-        $data = [(string)$jumpUrl, (string)$locationData, (string)$mimeType];
-        return GeneralUtility::hmac(serialize($data));
+        return self::calculateHash(serialize([(string)$jumpUrl, (string)$locationData, (string)$mimeType]));
     }
 }

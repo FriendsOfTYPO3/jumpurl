@@ -21,6 +21,7 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Core\Environment;
+use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
@@ -30,6 +31,7 @@ use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\TypoScript\PageTsConfig;
 use TYPO3\CMS\Core\TypoScript\PageTsConfigFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
@@ -45,20 +47,10 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
  */
 class JumpUrlHandler implements MiddlewareInterface
 {
-    /**
-     * @var TimeTracker
-     */
-    protected $timeTracker;
-
-    /**
-     * @var TypoScriptFrontendController
-     */
-    protected $typoScriptFrontendController;
-
-    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null, TimeTracker $timeTracker = null)
+    public function __construct(protected ?TypoScriptFrontendController $typoScriptFrontendController = null, protected ?TimeTracker $timeTracker = null)
     {
-        $this->typoScriptFrontendController = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
-        $this->timeTracker = $timeTracker ?? GeneralUtility::makeInstance(TimeTracker::class);
+        $this->typoScriptFrontendController ??= $GLOBALS['TSFE'] ?? null;
+        $this->timeTracker ??= GeneralUtility::makeInstance(TimeTracker::class);
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -92,7 +84,12 @@ class JumpUrlHandler implements MiddlewareInterface
 
         // Allow sections in links
         $jumpUrl = str_replace('%23', '#', $jumpUrl);
-        $jumpUrl = $this->addParametersToTransferSession($jumpUrl, $pageTSconfig);
+        /** @var FrontendUserAuthentication $frontendUser */
+        $frontendUser = $request->getAttribute('frontend.user');
+        $isLoggedIn = $frontendUser instanceof FrontendUserAuthentication && (int)$frontendUser->getUserId() > 0;
+        if ($isLoggedIn && !empty($pageTSconfig['jumpUrl_transferSession'])) {
+            $jumpUrl = $this->addParametersToTransferSession($jumpUrl, $pageTSconfig, $frontendUser->getUserId());
+        }
 
         $statusCode = $this->getRedirectStatusCode($pageTSconfig);
         return new RedirectResponse($jumpUrl, $statusCode);
@@ -156,7 +153,6 @@ class JumpUrlHandler implements MiddlewareInterface
         $absoluteFileName = GeneralUtility::getFileAbsFileName(GeneralUtility::resolveBackPath($jumpUrl));
         
         // Check if requested file accessable
-        $fileAccessAllowed = false;
         $fileAccessAllowed = GeneralUtility::isAllowedAbsPath($absoluteFileName)
             && GeneralUtility::makeInstance(FileNameValidator::class)->isValid($absoluteFileName)
             && !str_starts_with($absoluteFileName, Environment::getLegacyConfigPath());
@@ -183,7 +179,7 @@ class JumpUrlHandler implements MiddlewareInterface
     {
         $isValidLocationData = false;
         [$pageUid, $table, $recordUid] = explode(':', $locationData);
-        $pageRepository = $this->getTypoScriptFrontendController()->sys_page;
+        $pageRepository = GeneralUtility::makeInstance(PageRepository::class);
         if (empty($table) || $pageRepository->checkRecord($table, $recordUid, true)) {
             // This check means that a record is checked only if the locationData has a value for a
             // record else than the page.
@@ -235,35 +231,31 @@ class JumpUrlHandler implements MiddlewareInterface
      */
     protected function isJumpUrlHashValid(string $jumpUrl, string $submittedHash): bool
     {
-        return $submittedHash === JumpUrlUtility::calculateHash($jumpUrl);
+        return $submittedHash === JumpUrlUtility::calculateHash($jumpUrl, 'jumpurl');
     }
 
     /**
      * Modified the URL to go to by adding the session key information to it
-     * but only if TSFE.jumpUrl_transferSession = 1 is set via pageTSconfig.
      *
      * @param string $jumpUrl the URL to go to
-     * @param array $pageTSconfig the TSFE. part of the TS configuration
+     * @param int $frontendUserId the Uid of the current user
      *
      * @return string the modified URL
      */
-    protected function addParametersToTransferSession(string $jumpUrl, array $pageTSconfig): string
+    protected function addParametersToTransferSession(string $jumpUrl, int $frontendUserId): string
     {
         // allow to send the current fe_user with the jump URL
-        if (!empty($pageTSconfig['jumpUrl_transferSession'])) {
-            $uParts = parse_url($jumpUrl);
-            /** @noinspection PhpInternalEntityUsedInspection We need access to the current frontend user ID. */
-            $params = '&FE_SESSION_KEY=' .
-                rawurlencode(
-                    $this->getTypoScriptFrontendController()->fe_user->id . '-' .
-                    md5(
-                        $this->getTypoScriptFrontendController()->fe_user->id . '/' .
-                        $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey']
-                    )
-                );
-            // Add the session parameter ...
-            $jumpUrl .= ($uParts['query'] ? '' : '?') . $params;
-        }
+        $uParts = parse_url($jumpUrl);
+        $params = '&FE_SESSION_KEY=' .
+            rawurlencode(
+                $frontendUserId . '-' .
+                md5(
+                    $frontendUserId . '/' .
+                    $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey']
+                )
+            );
+        // Add the session parameter ...
+        $jumpUrl .= ($uParts['query'] ? '' : '?') . $params;
         return $jumpUrl;
     }
 
@@ -298,8 +290,8 @@ class JumpUrlHandler implements MiddlewareInterface
         return GeneralUtility::makeInstance(ResourceFactory::class);
     }
 
-    protected function getTypoScriptFrontendController(): TypoScriptFrontendController
+    protected function getTypoScriptFrontendController(): ?TypoScriptFrontendController
     {
-        return $this->typoScriptFrontendController ?? $GLOBALS['TSFE'];
+        return $this->typoScriptFrontendController;
     }
 }
